@@ -31,9 +31,19 @@ class MemoryManager:
     - ``metadata.json`` — agent metadata (created, last run, etc.)
     """
 
-    def __init__(self, storage_dir: str = "./cognicore_data"):
+    def __init__(self, storage_dir: str = "./cognicore_data", db_path: Optional[str] = None):
         self.storage_dir = os.path.abspath(storage_dir)
         os.makedirs(self.storage_dir, exist_ok=True)
+        self.db_path = db_path or os.path.join(self.storage_dir, "cognicore_memory.db")
+        self._sqlite = None
+
+    @property
+    def sqlite(self):
+        """Main SQLite memory backend for this MemoryManager."""
+        if self._sqlite is None:
+            from cognicore.memory.sqlite_backend import SQLiteMemoryBackend
+            self._sqlite = SQLiteMemoryBackend(self.db_path)
+        return self._sqlite
 
     def _agent_dir(self, agent_id: str) -> str:
         d = os.path.join(self.storage_dir, agent_id)

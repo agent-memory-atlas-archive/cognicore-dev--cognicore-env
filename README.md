@@ -314,6 +314,85 @@ CogniCore includes a **Claude plugin** that gives Claude persistent memory acros
 
 ---
 
+## mem0 Integration
+
+Transfer verified CogniCore memories to/from [mem0](https://github.com/mem0ai/mem0) with cryptographic integrity.
+
+```bash
+pip install cognicore-env cryptography
+```
+
+**Export** a sealed bundle (Ed25519-signed, deterministic canonical JSON):
+```python
+from cognicore.integrations.mem0 import export_bundle
+from cognicore.integrations.mem0.crypto import generate_keypair
+from cognicore.memory_manager import MemoryManager
+
+private_key, public_key = generate_keypair()
+mgr = MemoryManager(storage_dir="./cognicore_data")
+
+receipt = export_bundle(
+    source=mgr,
+    out="bundle.json",
+    signing_key=private_key,
+    signer_id="my-agent",
+)
+```
+
+**Import** with fail-closed verification (no bypass possible):
+```python
+from cognicore.integrations.mem0 import import_bundle, QuarantinePartition
+
+receipt = import_bundle(
+    path="bundle.json",
+    target=MemoryManager(storage_dir="./new_store"),
+    signer_keys={"my-agent": public_key},
+)
+# Valid verified memories land directly in the trusted partition.
+# Records that are unverified or env-incompatible enter structural quarantine.
+# Promotion requires a verification event (fresh evidence) -- never time or repetition.
+```
+
+**Quarantine Partition & Promotion**:
+```python
+partition = QuarantinePartition("./new_store/mem0_import_...")
+
+# Normal search sees ONLY trusted memories (quarantine is invisible)
+results = partition.search_trusted("build fix", top_k=5)
+
+# Quarantined memories are physically separated in quarantine.json
+quarantined = partition.get_quarantined()
+
+# Promotion to trusted requires fresh verification evidence
+partition.promote(
+    entry_id="quarantined-entry-id",
+    evidence=[fresh_evidence_record],
+)
+```
+
+**Sync** verified memories into a live mem0 client:
+```python
+from cognicore.integrations.mem0 import sync_to_mem0
+from mem0 import MemoryClient
+
+receipt = sync_to_mem0(
+    target_mem0_client=MemoryClient(api_key="..."),
+    source=mgr,
+)
+```
+
+| CogniCore category | mem0 mapping |
+|---|---|
+| `build_command` | procedure (custom metadata: `kind=command`) |
+| `failure` / `pitfall` | memory with `kind=warning`, `inferred=False` |
+| `success` / `workaround` | memory with `kind=solution` |
+| `environment_fingerprint` | memory metadata block |
+| evidence receipt | mem0 metadata dict (never merged into text) |
+
+Design: [mem0ai/mem0#7376](https://github.com/mem0ai/mem0/issues/7376) | [run-llama/llama_index#23122](https://github.com/run-llama/llama_index/issues/23122)
+
+---
+
 ## Troubleshooting
 
 **`ModuleNotFoundError: No module named 'cognicore'`**
