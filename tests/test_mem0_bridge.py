@@ -781,3 +781,139 @@ class TestPromotion:
             assert "fresh verification evidence" in str(exc_info.value)
             assert reloaded.quarantine_count == 1
             assert reloaded.trusted_count == 0
+
+
+# ======================================================================
+# 15. Verifier-defeat vector (the check is the tested thing)
+# ======================================================================
+# External review (2026-09-27, tested at 708f7cbd): neutering the
+# reachability assertion -- `if dark:` -> `if False and dark:`, one
+# line -- left this suite at 12/12 green.  The verdict class existed;
+# no test proved the verdict class fires.  These two tests close that
+# hole, and are deliberately written so the fault (the mutation) is a
+# parameter and the trigger (which check runs it) is an argument:
+# point the same vector at the import-time assertion here, and at the
+# periodic reachability sweep when it lands, by changing the target.
+# ======================================================================
+
+
+class TestReachabilityFires:
+    """The missing direct test: a claim that imports clean but is
+    unreachable must raise IntegrityFailed -- same verdict class as a
+    tampered bundle.
+
+    Darkness is simulated at the recall seam (index lag: bytes stored,
+    index does not name them) because that is the runtime failure mode
+    measured upstream: 990 notes on disk, 70 named by the always-loaded
+    index, 276 in neither -- byte-identical, unreachable.
+    """
+
+    DARK_ID = "mem-002"
+
+    def test_dark_claim_fails_import(self, monkeypatch):
+        with _safe_tmpdir() as tmpdir:
+            entries = [
+                _make_verified_entry("mem-001", "Use cmake", "build_command"),
+                _make_verified_entry("mem-002", "Avoid rm -rf /", "pitfall"),
+            ]
+            path, _, _, pub = _export_and_get_bundle(tmpdir, entries)
+
+            target_dir = os.path.join(tmpdir, "target")
+            target_mgr = MemoryManager(storage_dir=target_dir)
+
+            # Export completed before patching; now drop mem-002 from BOTH
+            # recall paths (search + category fallback) to model a stale index.
+            from cognicore.memory.sqlite_backend import SQLiteMemoryBackend
+
+            orig_search = SQLiteMemoryBackend.search
+            orig_by_cat = SQLiteMemoryBackend.get_by_category
+
+            def _drop_dark(results):
+                kept = []
+                for item in results:
+                    entry = getattr(item, "entry", item)  # SearchResult or MemoryEntry
+                    meta = getattr(entry, "metadata", None) or {}
+                    if meta.get("bundle_entry_id") == self.DARK_ID:
+                        continue
+                    kept.append(item)
+                return kept
+
+            def _dark_search(self, query, *args, **kwargs):
+                return _drop_dark(orig_search(self, query, *args, **kwargs))
+
+            def _dark_by_cat(self, *args, **kwargs):
+                return _drop_dark(orig_by_cat(self, *args, **kwargs))
+
+            monkeypatch.setattr(SQLiteMemoryBackend, "search", _dark_search)
+            monkeypatch.setattr(SQLiteMemoryBackend, "get_by_category", _dark_by_cat)
+
+            with pytest.raises(IntegrityFailed) as exc_info:
+                import_bundle(
+                    path=path,
+                    target=target_mgr,
+                    signer_keys={"test-signer": pub},
+                )
+            assert "reachability" in str(exc_info.value)
+            assert exc_info.value.verdict == ImportVerdict.INTEGRITY_FAILED
+
+
+class TestVerifierDefeatVector:
+    """Fault injection aimed at the CHECK, not the artifact.
+
+    Vector: neuter the reachability assertion (`if dark:` ->
+    `if False and dark:`).  Expected verdict: the suite goes red.
+    If the suite stays green with the check defeated, the guarantee is
+    unobservable -- a check nobody has watched fail is a promise, not
+    a guarantee.
+    """
+
+    IMPORTER = os.path.join(
+        "cognicore", "integrations", "mem0", "importer.py"
+    )
+
+    def _apply_mutation(self):
+        """Apply the one-line neutering to the live source; returns the
+        pristine bytes for restore."""
+        with open(self.IMPORTER, "r", encoding="utf-8") as fh:
+            pristine = fh.read()
+        mutated = pristine.replace(
+            "    if dark:", "    if False and dark:", 1
+        )
+        assert mutated != pristine, (
+            "mutation site drifted: the 'if dark:' reachability check is "
+            "not where this vector expects it. Update the vector to the "
+            "new site -- a moved check and a deleted check are both "
+            "findings."
+        )
+        with open(self.IMPORTER, "w", encoding="utf-8") as fh:
+            fh.write(mutated)
+        return pristine
+
+    def test_reachability_check_defeat_makes_suite_red(self):
+        import subprocess
+        import sys
+
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        pristine = self._apply_mutation()
+        try:
+            proc = subprocess.run(
+                [
+                    sys.executable, "-m", "pytest",
+                    "tests/test_mem0_bridge.py", "-q", "--no-header",
+                    "-k", "reachability or dark",
+                ],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            assert proc.returncode != 0, (
+                "VERIFIER DEFEAT UNDETECTED: the reachability assertion was "
+                "neutered (if dark -> if False and dark) and the suite "
+                "stayed green. The check is a promise, not a guarantee, "
+                "until some test goes red here.\n\n"
+                + proc.stdout[-2000:]
+            )
+        finally:
+            with open(self.IMPORTER, "w", encoding="utf-8") as fh:
+                fh.write(pristine)
