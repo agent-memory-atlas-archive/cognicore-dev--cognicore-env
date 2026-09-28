@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **mem0 Integration (`cognicore.integrations.mem0`)**: Verified memory transfer bridge to mem0 (`mem0ai/mem0`). Sealed bundle export/import with Ed25519 signing, deterministic canonical JSON, fail-closed signature verification, consequence-class split (authority vs information), structural quarantine (`quarantine.json` with dedicated TF-IDF index and query path), custody chain revocation checking, environment compatibility, promotion requiring fresh verification evidence, and index recall reachability assertions. Includes `sync_to_mem0()` for pushing verified memories into a live mem0 client. See `cognicore/integrations/mem0/` and `tests/test_mem0_bridge.py`.
+
 ### Changed
 - Synced contributor docs and package metadata to `cognicore-dev/cognicore-my-openenv`, package version `0.9.5`, and Python 3.10+
 
