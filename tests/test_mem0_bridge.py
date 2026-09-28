@@ -889,6 +889,12 @@ class TestVerifierDefeatVector:
             fh.write(mutated)
         return pristine
 
+    @pytest.mark.skipif(
+        os.environ.get("PYTEST_XDIST_WORKER") is not None,
+        reason="mutates importer.py on disk and runs a subprocess suite; "
+        "unsafe under pytest-xdist parallel workers (run serially, or as a "
+        "dedicated CI step)",
+    )
     def test_reachability_check_defeat_makes_suite_red(self):
         import subprocess
         import sys
