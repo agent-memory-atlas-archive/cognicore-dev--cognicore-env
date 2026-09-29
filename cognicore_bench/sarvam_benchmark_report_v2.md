@@ -1,0 +1,20 @@
+# CogniCore Sarvam AI Memory Extraction Benchmark - V2
+
+## V2 Prompt Enhancements
+- Restored output keys back to standard `"text"` and `"memory_type"` (CogniCore compatible)
+- Explicitly requested: *facts, rules, preferences, constraints, successful solutions, and failed approaches*
+- Safe compression: `User:` -> `U:`, `Agent:` -> `A:`, stripped blank lines (preserved all text/negations).
+
+## Aggregate Token Reductions (Across 50 samples)
+- **Baseline Total Tokens**: 14750
+- **V1 Total Tokens**: 9309 (Reduction: 36.9%)
+- **V2 Total Tokens**: 11558 (Reduction: 21.6%)
+
+## Memory Quality Metrics
+- **Baseline Average Recall**: 94.4%
+- **V1 Optimized Average Recall**: 89.5%
+- **V2 Optimized Average Recall**: 91.6%
+- **Total V2 Regressions**: 8 out of 50 samples
+
+### Regressions by Category
+- **preferences**: 2 regression(s)\n- **failures_fixes**: 4 regression(s)\n- **environment**: 2 regression(s)\n\n### Regression Deep-Dive\n- Sample `pref_5` (preferences): Baseline 100.0% -> V2 66.7%\n  - Expected: ['django', 'microservice', '4 spaces']\n  - V2 Output: [{"text": "Django must be used for the project", "memory_type": "constraint"}, {"text": "Use 4 spaces for indentation", "memory_type": "rule"}]\n- Sample `pref_9` (preferences): Baseline 100.0% -> V2 66.7%\n  - Expected: ['ruby on rails', 'microservice', '4 spaces']\n  - V2 Output: [{"text": "Ruby on Rails is an absolute must for this project.", "memory_type": "constraint"}, {"text": "Use 4 spaces for indentation.", "memory_type": "rule"}]\n- Sample `fail_fix_1` (failures_fixes): Baseline 100.0% -> V2 66.7%\n  - Expected: ['oom kill', 'increase swap', 'production']\n  - V2 Output: [{"text": "OOM kill occurred in production server", "memory_type": "fact"}, {"text": "Checking logs is a recommended first step for diagnosing OOM kills", "memory_type": "rule"}, {"text": "Increasing swap can resolve OOM kills", "memory_type": "successful solution"}, {"text": "The swap fix completely resolved the OOM kill", "memory_type": "successful solution"}, {"text": "Remember the swap fix for future OOM kill incidents", "memory_type": "preference"}]\n- Sample `fail_fix_5` (failures_fixes): Baseline 100.0% -> V2 66.7%\n  - Expected: ['deadlock', 'mutex lock', 'production']\n  - V2 Output: [{"text": "Apply mutex lock fix to resolve Deadlock", "memory_type": "successful solution"}, {"text": "Check logs when encountering Deadlock", "memory_type": "successful solution"}, {"text": "Do not apply mutex lock fix without checking logs first", "memory_type": "failed approach"}]\n- Sample `fail_fix_6` (failures_fixes): Baseline 100.0% -> V2 66.7%\n  - Expected: ['nullpointer', 'optional chaining', 'production']\n  - V2 Output: [{"text": "applied the optional chaining fix", "memory_type": "successful solution"}, {"text": "optional chaining fix completely resolved the NullPointer", "memory_type": "successful solution"}, {"text": "looking at the logs", "memory_type": "preference"}, {"text": "Remember this for next time", "memory_type": "preference"}]\n- Sample `fail_fix_9` (failures_fixes): Baseline 100.0% -> V2 66.7%\n  - Expected: ['race condition', 'atomic', 'production']\n  - V2 Output: [{"text": "Apply an atomic fix to resolve race conditions", "memory_type": "successful solution"}, {"text": "Do not rely solely on logs to resolve race conditions", "memory_type": "failed approach"}]\n- Sample `env_0` (environment): Baseline 100.0% -> V2 50.0%\n  - Expected: ['ubuntu 22.04', 'python 3.11']\n  - V2 Output: [{"text": "The app is being deployed on Ubuntu 22.04 LTS", "memory_type": "fact"}, {"text": "The Python version must be strictly 3.11", "memory_type": "constraint"}]\n- Sample `env_3` (environment): Baseline 100.0% -> V2 50.0%\n  - Expected: ['ubuntu 22.04', 'python 3.11']\n  - V2 Output: [{"text": "We are running on Ubuntu 22.04 LTS. The Python version is strictly 3.11.", "memory_type": "constraint"}]\n
