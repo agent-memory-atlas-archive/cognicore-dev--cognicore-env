@@ -267,6 +267,7 @@ pip install cognicore-env[rl]      # RL training (gymnasium, PyTorch)
 pip install cognicore-env[memory]  # Semantic memory (sentence-transformers)
 pip install cognicore-env[llm]     # LLM agents (openai client)
 pip install cognicore-env[server]  # Live dashboard (fastapi, uvicorn)
+pip install cognicore-env[mem0]    # mem0 transfer bundle (cryptography, mem0ai)
 pip install cognicore-env[dev]     # Testing (pytest, coverage)
 pip install cognicore-env[all]     # Everything
 ```
@@ -319,7 +320,7 @@ CogniCore includes a **Claude plugin** that gives Claude persistent memory acros
 Transfer verified CogniCore memories to/from [mem0](https://github.com/mem0ai/mem0) with cryptographic integrity.
 
 ```bash
-pip install cognicore-env cryptography
+pip install cognicore-env[mem0]
 ```
 
 **Export** a sealed bundle (Ed25519-signed, deterministic canonical JSON):

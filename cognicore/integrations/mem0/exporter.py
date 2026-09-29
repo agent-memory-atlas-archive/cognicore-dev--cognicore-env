@@ -127,7 +127,35 @@ def _classify_consequence(entry: MemoryEntry) -> ConsequenceClass:
 
 
 def _entry_to_record(entry: MemoryEntry) -> Dict[str, Any]:
-    """Convert a MemoryEntry to a bundle-transportable record dict."""
+    """Convert a MemoryEntry to a bundle-transportable record dict.
+
+    All float fields on :class:`MemoryEntry` are quantized to ints before
+    placement on the signed wire. Floats are forbidden in the signed schema
+    (see ``FloatInSignedSchemaError`` in ``crypto.py`` and issue #135 item
+    3) because their byte-level representation differs across language
+    runtimes (Python vs ECMAScript vs Rust), which would silently break
+    the deterministic Ed25519 signature contract.
+
+    Quantization rules (reversed by the importer on read):
+
+    - ``confidence`` (float in [0.0, 1.0]) → ``confidence_basis_points``
+      (int in [0, 10000], 4 decimal precision).
+    - ``importance`` (float in [0.0, 1.0]) → ``importance_basis_points``
+      (int in [0, 10000]).
+    - ``relevance`` (float in [0.0, 1.0]) → ``relevance_basis_points``
+      (int in [0, 10000]).
+    - ``utility_score`` (float, unbounded) → ``utility_score_milli``
+      (int, 3 decimal precision, signed).
+    - ``timestamp`` (unix epoch float) → ``timestamp_ms`` (int milliseconds).
+    - ``last_accessed`` (unix epoch float) → ``last_accessed_ms``
+      (int milliseconds).
+
+    Out-of-range values are clamped to the valid range for bounded
+    fields, so a corrupted float in memory cannot produce an undetectable
+    schema violation on the wire.
+
+    Refs: cognicore-dev/cognicore-env#135 (item 3, option 2).
+    """
     record = entry.to_dict()
     # Strip internal / derived fields
     meta = record.get("metadata", {})
@@ -138,6 +166,45 @@ def _entry_to_record(entry: MemoryEntry) -> Dict[str, Any]:
     if orig_id:
         record["entry_id"] = orig_id
     record["consequence_class"] = _classify_consequence(entry).value
+
+    # ---- Quantize all float fields to int (signed-schema rule, #135 item 3) ----
+
+    # Probabilities in [0.0, 1.0] → basis points [0, 10000]
+    for src_field, dst_field in (
+        ("confidence", "confidence_basis_points"),
+        ("importance", "importance_basis_points"),
+        ("relevance", "relevance_basis_points"),
+    ):
+        val = record.pop(src_field, None)
+        if val is not None:
+            try:
+                bp = int(round(float(val) * 10000))
+            except (TypeError, ValueError):
+                bp = 0
+            record[dst_field] = max(0, min(10000, bp))
+
+    # Unbounded floats (signed) → milli-units (3 decimal precision)
+    val = record.pop("utility_score", None)
+    if val is not None:
+        try:
+            record["utility_score_milli"] = int(round(float(val) * 1000))
+        except (TypeError, ValueError):
+            record["utility_score_milli"] = 0
+
+    # Unix-time floats → millisecond ints (preserves 3 decimal places of
+    # sub-second precision, which is well below any clock jitter that
+    # matters for memory custody).
+    for src_field, dst_field in (
+        ("timestamp", "timestamp_ms"),
+        ("last_accessed", "last_accessed_ms"),
+    ):
+        val = record.pop(src_field, None)
+        if val is not None:
+            try:
+                record[dst_field] = int(round(float(val) * 1000))
+            except (TypeError, ValueError):
+                record[dst_field] = 0
+
     return record
 
 

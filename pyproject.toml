@@ -57,7 +57,7 @@ dev = [
     "mcp[cli]>=1.2.0,<2",
 ]
 all = [
-    "cognicore-env[rl,rendering,memory,hf,llm,embeddings,server,mcp,langchain,crewai,openai-agents,memory-providers,extension,dev]",
+    "cognicore-env[rl,rendering,memory,hf,llm,embeddings,server,mcp,langchain,crewai,openai-agents,mem0,memory-providers,extension,dev]",
 ]
 
 [project.urls]
