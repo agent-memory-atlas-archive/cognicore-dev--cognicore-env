@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Studio — CogniCore</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #06080f; --bg2: #0d1117; --card: #161b22; --card-hover: #1c2333;
+            --border: #21262d; --focus: #388bfd; --text: #e6edf3; --text2: #8b949e;
+            --muted: #484f58; --accent: #388bfd; --purple: #a371f7; --green: #3fb950;
+            --red: #f85149; --amber: #d29922; --cyan: #39d2c0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 0%, rgba(56,139,253,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(163,113,247,0.06) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+        .app { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+        /* Nav */
+        .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .nav-brand { display: flex; align-items: center; gap: 10px; }
+        .nav-brand h1 { font-size: 1.2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-brand span { font-size: 0.75rem; color: var(--text2); background: var(--card); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); }
+        .nav-status { display: flex; gap: 8px; align-items: center; }
+
+        /* Badges */
+        .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-live { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+        .badge-mock { background: rgba(210,153,34,0.15); color: var(--amber); border: 1px solid rgba(210,153,34,0.3); }
+        .badge-pending { background: rgba(139,148,158,0.15); color: var(--text2); border: 1px solid var(--border); }
+        .badge-running { background: rgba(56,139,253,0.15); color: var(--accent); border: 1px solid rgba(56,139,253,0.3); }
+        .badge-completed { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+        .badge-failed { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+        .badge-review { background: rgba(163,113,247,0.15); color: var(--purple); border: 1px solid rgba(163,113,247,0.3); }
+
+        /* Cards */
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .card-title { font-size: 0.85rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .card-title .icon { font-size: 1rem; }
+
+        /* Grid */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+        /* Form */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.8rem; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+        input, select, textarea { width: 100%; padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: var(--focus); }
+        textarea { resize: vertical; min-height: 60px; }
+        select { cursor: pointer; }
+        option { background: var(--bg2); }
+
+        /* Buttons */
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-family: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: linear-gradient(135deg, var(--accent), var(--purple)); color: white; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--card-hover); }
+
+        /* Pipeline */
+        .pipeline { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+        .pipe-step { flex: 1; min-width: 100px; padding: 10px 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; text-align: center; font-size: 0.75rem; transition: all 0.3s; }
+        .pipe-step .step-name { font-weight: 600; margin-bottom: 2px; }
+        .pipe-step .step-status { font-size: 0.65rem; color: var(--text2); }
+        .pipe-step.active { border-color: var(--accent); background: rgba(56,139,253,0.1); }
+        .pipe-step.done { border-color: var(--green); background: rgba(63,185,80,0.08); }
+        .pipe-step.fail { border-color: var(--red); background: rgba(248,81,73,0.08); }
+        .pipe-step.mock { border-color: var(--amber); }
+
+        /* Timeline */
+        .timeline-bar { display: flex; gap: 2px; margin: 8px 0; border-radius: 6px; overflow: hidden; }
+        .timeline-scene { height: 32px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 600; color: white; min-width: 40px; }
+        .timeline-scene:nth-child(1) { background: var(--accent); }
+        .timeline-scene:nth-child(2) { background: var(--purple); }
+        .timeline-scene:nth-child(3) { background: var(--cyan); }
+        .timeline-scene:nth-child(4) { background: var(--green); }
+        .timeline-scene:nth-child(5) { background: var(--amber); }
+
+        /* Script */
+        .script-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; max-height: 300px; overflow-y: auto; color: var(--text2); }
+
+        /* Scene list */
+        .scene-item { padding: 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+        .scene-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .scene-title { font-weight: 600; font-size: 0.85rem; }
+        .scene-dur { font-size: 0.75rem; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+        .scene-narration { font-size: 0.8rem; color: var(--text2); }
+
+        /* Memory */
+        .memory-item { padding: 10px; background: var(--bg2); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; margin-bottom: 6px; font-size: 0.8rem; }
+        .memory-item .mem-label { font-size: 0.7rem; color: var(--text2); margin-bottom: 2px; }
+
+        /* Connector grid */
+        .connector-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .connector-item:last-child { border-bottom: none; }
+        .connector-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .connector-dot.live { background: var(--green); }
+        .connector-dot.mock { background: var(--amber); }
+        .connector-name { font-size: 0.85rem; font-weight: 500; flex: 1; }
+        .connector-state { font-size: 0.75rem; color: var(--text2); }
+
+        /* Loading */
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .hidden { display: none; }
+        .mt-16 { margin-top: 16px; }
+        .mb-8 { margin-bottom: 8px; }
+        .text-center { text-align: center; }
+        .text-muted { color: var(--text2); font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- Nav -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <h1>⚡ AI Content Studio</h1>
+            <span>CogniCore-Powered</span>
+        </div>
+        <div class="nav-status" id="navStatus"></div>
+    </nav>
+
+    <!-- Create Project -->
+    <div class="card" id="createCard">
+        <div class="card-title"><span class="icon">🎬</span> New Project</div>
+        <div class="grid-2">
+            <div>
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="projectName" value="My Content Project" />
+                </div>
+                <div class="form-group">
+                    <label>Figma URL or Design Description</label>
+                    <textarea id="figmaInput" placeholder="https://figma.com/file/abc123/... or describe the design"></textarea>
+                </div>
+            </div>
+            <div>
+                <div class="form-group">
+                    <label>Language</label>
+                    <select id="language"></select>
+                </div>
+                <div class="form-group">
+                    <label>Output Type</label>
+                    <select id="outputType">
+                        <option value="pptx">PowerPoint (PPTX)</option>
+                        <option value="video">Video Plan</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="btnCreate" onclick="createProject()">
+                    🚀 Create & Run
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Status -->
+    <div class="card hidden" id="pipelineCard">
+        <div class="card-title"><span class="icon">⚙️</span> Pipeline <span class="badge badge-pending" id="pipeState">pending</span></div>
+        <div class="pipeline" id="pipeline"></div>
+    </div>
+
+    <!-- Results Grid -->
+    <div class="grid-2 hidden" id="resultsGrid">
+        <!-- Script -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📝</span> Generated Script</div>
+            <div class="script-box" id="scriptBox">Script will appear here after generation...</div>
+        </div>
+        <!-- Scenes -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🎞️</span> Scene Timeline</div>
+            <div class="timeline-bar" id="timelineBar"></div>
+            <div id="sceneList"></div>
+            <div class="text-muted mt-16" id="syncStatus"></div>
+        </div>
+    </div>
+
+    <div class="grid-2 hidden" id="bottomGrid">
+        <!-- Artifacts -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📦</span> Artifacts & Downloads</div>
+            <div id="artifactList"><p class="text-muted">No artifacts yet.</p></div>
+        </div>
+        <!-- Memory -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🧠</span> CogniCore Memory</div>
+            <div id="memoryPanel"><p class="text-muted">Memory records will appear after workflow completion.</p></div>
+        </div>
+    </div>
+
+    <!-- Connectors -->
+    <div class="card" id="connectorsCard">
+        <div class="card-title"><span class="icon">🔌</span> Connector Status</div>
+        <div id="connectorList"></div>
+    </div>
+</div>
+
+<script>
+const API = '';
+let currentProject = null;
+
+async function init() {
+    // Load health & connectors
+    try {
+        const health = await (await fetch(`${API}/api/health`)).json();
+        document.getElementById('navStatus').innerHTML =
+            `<span class="badge ${health.mock_mode ? 'badge-mock' : 'badge-live'}">${health.mock_mode ? 'Mock Mode' : 'Live Mode'}</span>`;
+
+        const connectors = health.connectors || {};
+        let html = '';
+        for (const [name, state] of Object.entries(connectors)) {
+            const isLive = state.includes('live');
+            let actionBtn = '';
+            if (name === 'canva' && state.includes('ready to connect')) {
+                actionBtn = `<a href="${API}/api/auth/canva/login" class="btn btn-secondary" style="font-size:0.75rem;padding:4px 10px;text-decoration:none;">🔗 Connect Canva</a>`;
+            } else if (name === 'canva' && isLive) {
+                actionBtn = `<span class="badge badge-live" style="font-size:0.65rem;">Connected</span>`;
+            }
+            html += `<div class="connector-item">
+                <div class="connector-dot ${isLive ? 'live' : 'mock'}"></div>
+                <div class="connector-name">${name}</div>
+                <div class="connector-state">${state}</div>
+                ${actionBtn}
+            </div>`;
+        }
+        document.getElementById('connectorList').innerHTML = html;
+    } catch(e) {
+        document.getElementById('navStatus').innerHTML = '<span class="badge badge-failed">Offline</span>';
+    }
+
+    // Load languages
+    try {
+        const langs = await (await fetch(`${API}/api/languages`)).json();
+        const sel = document.getElementById('language');
+        for (const [code, name] of Object.entries(langs.languages)) {
+            const opt = document.createElement('option');
+            opt.value = code; opt.textContent = `${name} (${code})`;
+            if (code === 'en') opt.selected = true;
+            sel.appendChild(opt);
+        }
+    } catch(e) {}
+}
+
+async function createProject() {
+    const btn = document.getElementById('btnCreate');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Creating...';
+
+    try {
+        const body = {
+            name: document.getElementById('projectName').value,
+            figma_input: document.getElementById('figmaInput').value || 'A modern SaaS dashboard with clean, minimalist design using light backgrounds, blue accents, and Inter font',
+            language: document.getElementById('language').value,
+            output_type: document.getElementById('outputType').value
+        };
+
+        const res = await fetch(`${API}/api/projects`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+        });
+        currentProject = await res.json();
+
+        // Show pipeline
+        showPipeline();
+
+        // Run workflow
+        btn.innerHTML = '<div class="spinner"></div> Running pipeline...';
+        const runRes = await fetch(`${API}/api/projects/${currentProject.project_id}/run`, {method: 'POST'});
+        currentProject = await runRes.json();
+        renderProject();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🚀 Create & Run';
+    }
+}
+
+const STEPS = ['figma_extract', 'script_gen', 'localize', 'visual_gen', 'voice_gen', 'timeline_sync', 'export', 'cognicore_record'];
+const STEP_LABELS = {
+    figma_extract: 'Figma', script_gen: 'Script', localize: 'Translate',
+    visual_gen: 'Visuals', voice_gen: 'Voice', timeline_sync: 'Sync',
+    export: 'Export', cognicore_record: 'Memory'
+};
+
+function showPipeline() {
+    document.getElementById('pipelineCard').classList.remove('hidden');
+    document.getElementById('resultsGrid').classList.remove('hidden');
+    document.getElementById('bottomGrid').classList.remove('hidden');
+
+    let html = '';
+    STEPS.forEach(s => {
+        html += `<div class="pipe-step" id="step-${s}"><div class="step-name">${STEP_LABELS[s]}</div><div class="step-status">⏳</div></div>`;
+    });
+    document.getElementById('pipeline').innerHTML = html;
+}
+
+function renderProject() {
+    if (!currentProject) return;
+
+    // State badge
+    const stateMap = { pending: 'badge-pending', running: 'badge-running', completed: 'badge-completed', failed: 'badge-failed', needs_review: 'badge-review' };
+    const stateEl = document.getElementById('pipeState');
+    stateEl.className = `badge ${stateMap[currentProject.state] || 'badge-pending'}`;
+    stateEl.textContent = currentProject.state;
+
+    // Pipeline steps
+    (currentProject.step_results || []).forEach(sr => {
+        const el = document.getElementById(`step-${sr.step_name}`);
+        if (!el) return;
+        el.className = 'pipe-step ' + (sr.status === 'success' || sr.status === 'mock' ? 'done' : sr.status === 'failed' ? 'fail' : '');
+        if (sr.is_mock) el.classList.add('mock');
+        const icon = sr.status === 'success' ? '✓' : sr.status === 'mock' ? '○' : sr.status === 'failed' ? '✗' : '⏳';
+        el.querySelector('.step-status').textContent = `${icon} ${sr.is_mock ? '[MOCK]' : sr.status}`;
+    });
+
+    // Script
+    if (currentProject.script) {
+        document.getElementById('scriptBox').textContent = currentProject.script;
+    }
+
+    // Scenes + Timeline
+    const scenes = currentProject.scenes || [];
+    if (scenes.length > 0) {
+        const totalDur = scenes.reduce((a, s) => a + (s.duration_sec || 5), 0);
+        let barHtml = '';
+        let listHtml = '';
+        scenes.forEach((s, i) => {
+            const pct = ((s.duration_sec || 5) / totalDur * 100).toFixed(1);
+            barHtml += `<div class="timeline-scene" style="width:${pct}%">${s.title || 'S'+(i+1)}</div>`;
+            const audioIcon = s.audio_path ? '🔊' : (s.audio_duration_sec ? '⏱️' : '🔇');
+            listHtml += `<div class="scene-item">
+                <div class="scene-header">
+                    <div class="scene-title">${audioIcon} ${s.title || 'Scene '+(i+1)}</div>
+                    <div class="scene-dur">${(s.audio_duration_sec || s.duration_sec || 5).toFixed(1)}s</div>
+                </div>
+                <div class="scene-narration">${s.narration_text || ''}</div>
+            </div>`;
+        });
+        document.getElementById('timelineBar').innerHTML = barHtml;
+        document.getElementById('sceneList').innerHTML = listHtml;
+    }
+
+    // Sync status
+    if (currentProject.timeline) {
+        const t = currentProject.timeline;
+        document.getElementById('syncStatus').textContent =
+            `Total: ${t.total_duration_sec.toFixed(1)}s | Sync: ${t.sync_status}`;
+    }
+
+    // Artifacts
+    const arts = currentProject.artifacts || {};
+    if (Object.keys(arts).length > 0) {
+        let aHtml = '';
+        for (const [name, path] of Object.entries(arts)) {
+            if (name.includes('final_output')) continue; // Avoid duplicate button for final_output alias
+            if (name.endsWith('.mp4') || path.endsWith('.mp4')) {
+                aHtml += `<div style="margin-bottom:14px;background:var(--card-bg);padding:12px;border-radius:8px;border:1px solid var(--border);">
+                    <div style="font-weight:600;margin-bottom:6px;color:#38bdf8;">🎬 Final Video Presentation (MP4)</div>
+                    <video controls style="width:100%;max-height:220px;border-radius:6px;background:#000;margin-bottom:8px;" src="${API}/api/projects/${currentProject.project_id}/download/${name}"></video>
+                    <a href="${API}/api/projects/${currentProject.project_id}/download/${name}" class="btn btn-primary" style="font-size:0.8rem;padding:6px 14px;text-decoration:none;display:inline-block;">
+                        📥 Download MP4 Video
+                    </a>
+                </div>`;
+            } else if (name.endsWith('.pptx') || path.endsWith('.pptx')) {
+                aHtml += `<div style="margin-bottom:10px;">
+                    <a href="${API}/api/projects/${currentProject.project_id}/download/${name}" class="btn btn-primary" style="font-size:0.85rem;padding:8px 16px;text-decoration:none;display:inline-block;">
+                        📊 Download PowerPoint Presentation (.pptx)
+                    </a>
+                </div>`;
+            } else if (name === 'canva_edit_url') {
+                aHtml += `<div style="margin-bottom:12px;">
+                    <a href="${path}" target="_blank" class="btn btn-primary" style="background:linear-gradient(135deg, #7d2ae8, #00c4cc);border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;text-decoration:none;">
+                        🎨 Open & Edit in Canva
+                    </a>
+                </div>`;
+            } else if (name === 'canva_view_url') {
+                continue;
+            } else {
+                aHtml += `<div style="margin-bottom:6px">
+                    <a href="${API}/api/projects/${currentProject.project_id}/download/${name}" class="btn btn-secondary" style="font-size:0.8rem;padding:6px 12px;text-decoration:none;">
+                        📥 ${name}
+                    </a>
+                </div>`;
+            }
+        }
+        // Always show Canva AI Magic Presentation & Video helper
+        aHtml += `<div style="margin-top:14px;padding:12px;background:rgba(125,42,232,0.1);border:1px solid rgba(125,42,232,0.3);border-radius:8px;">
+            <div style="font-weight:600;color:#c084fc;margin-bottom:4px;">✨ Canva AI Magic Presentation & Video</div>
+            <div style="font-size:0.8rem;color:#cbd5e1;line-height:1.4;">Import your generated file into Canva to automatically apply Canva AI templates, brand layouts, and animations!</div>
+            <a href="https://www.canva.com/upload" target="_blank" class="btn btn-secondary" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;text-decoration:none;display:inline-block;">
+                🚀 Open Canva AI Importer (canva.com/upload)
+            </a>
+        </div>`;
+        document.getElementById('artifactList').innerHTML = aHtml;
+    }
+
+    // Memory
+    loadMemory();
+}
+
+async function loadMemory() {
+    try {
+        const res = await fetch(`${API}/api/memory/experiences`);
+        const data = await res.json();
+        let html = '';
+        (data.experiences || []).forEach(exp => {
+            html += `<div class="memory-item">
+                <div class="mem-label">${exp.verification_status || 'candidate'} | confidence: ${(exp.confidence || 0).toFixed(2)}</div>
+                <div>${exp.task || ''}: ${(exp.solution || '').substring(0, 120)}...</div>
+            </div>`;
+        });
+        if (!html) html = '<p class="text-muted">No prior experiences recorded yet.</p>';
+        document.getElementById('memoryPanel').innerHTML = html;
+
+        // Also load conversation
+        if (currentProject) {
+            const convRes = await fetch(`${API}/api/memory/conversation/${currentProject.project_id}`);
+            const convData = await convRes.json();
+            if ((convData.conversation || []).length > 0) {
+                html += `<div style="margin-top:12px"><div class="mem-label">Conversation entries: ${convData.conversation.length}</div></div>`;
+                document.getElementById('memoryPanel').innerHTML = html;
+            }
+        }
+    } catch(e) {}
+}
+
+init();
+</script>
+</body>
+</html>

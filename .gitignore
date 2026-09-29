@@ -12,3 +12,26 @@ venv/
 *.json
 !openenv.yaml
 test_imports.py
+
+# Database and binary artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.log
+id_lhr*
+cloudflared.exe
+benchmark_output/
+content_studio/output/
+*.mp3
+*.mp4
+*.pptx
+
+# Scratch & temporary scripts
+fix*.py
+test_sec*.py
+update*.py
+orig_remote.py
+test_fastmcp.py
+test_sarvam_tokens.py
+
+

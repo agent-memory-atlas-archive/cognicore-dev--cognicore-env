@@ -60,12 +60,14 @@ app.mount("/mcp", mcp.sse_app())
 def health_check():
     return {"status": "ok", "service": "cognicore-chatgpt-mcp"}
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://vtebftsovlncmyfxheko.supabase.co")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://vtebftsovlncmyfxheko.supabase.co").rstrip("/")
 
 @app.get("/.well-known/oauth-authorization-server")
+@app.get("/.well-known/openid-configuration")
+@app.get("/mcp/.well-known/oauth-authorization-server")
+@app.get("/mcp/.well-known/openid-configuration")
 def oauth_metadata(request: Request = None):
-    """OAuth 2.0 Authorization Server Metadata (RFC 8414) for MCP client discovery."""
-    # Use our own proxy endpoints so MCP clients route through us to Supabase
+    """OAuth 2.0 Authorization Server Metadata (RFC 8414 / OpenID Connect) for MCP client discovery."""
     base = str(request.base_url).rstrip("/") if request else ""
     return {
         "issuer": base or f"{SUPABASE_URL}/auth/v1",
@@ -75,49 +77,56 @@ def oauth_metadata(request: Request = None):
         "jwks_uri": f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
-        "token_endpoint_auth_methods_supported": ["none"],
+        "token_endpoint_auth_methods_supported": ["none", "client_secret_post", "client_secret_basic"],
         "code_challenge_methods_supported": ["S256"],
-        "scopes_supported": ["openid", "email", "profile"],
+        "scopes_supported": ["openid", "email", "profile", "offline_access"],
     }
 
-@app.get("/mcp/.well-known/oauth-authorization-server")
-def oauth_metadata_mcp():
-    """Same metadata served under /mcp prefix for MCP clients that scope discovery to the MCP mount."""
-    return oauth_metadata()
-
 @app.get("/authorize")
+@app.get("/mcp/authorize")
 async def authorize_redirect(request: Request):
     """Redirect OAuth authorize requests to Supabase, passing through all query params."""
     from fastapi.responses import RedirectResponse
     query_string = str(request.query_params)
+    target_url = f"{SUPABASE_URL}/auth/v1/oauth/authorize?{query_string}"
     return RedirectResponse(
-        url=f"{SUPABASE_URL}/auth/v1/authorize?{query_string}",
+        url=target_url,
         status_code=302,
     )
 
 @app.post("/token")
+@app.post("/mcp/token")
 async def token_proxy(request: Request):
-    """Proxy token exchange requests to Supabase."""
+    """Proxy token exchange requests to Supabase OAuth 2.1 token endpoint."""
     import httpx
     body = await request.body()
-    headers = {"Content-Type": request.headers.get("content-type", "application/x-www-form-urlencoded")}
+    content_type = request.headers.get("content-type", "application/x-www-form-urlencoded")
+    headers = {"Content-Type": content_type}
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{SUPABASE_URL}/auth/v1/token?grant_type=authorization_code",
+            f"{SUPABASE_URL}/auth/v1/oauth/token",
             content=body,
             headers=headers,
         )
-    return JSONResponse(content=resp.json(), status_code=resp.status_code)
+    try:
+        data = resp.json()
+    except Exception:
+        data = {"detail": resp.text}
+    return JSONResponse(content=data, status_code=resp.status_code)
 
 @app.post("/register")
+@app.post("/mcp/register")
 async def dynamic_client_registration(request: Request):
     """Minimal Dynamic Client Registration (RFC 7591) — returns our pre-configured Supabase OAuth client."""
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
     return JSONResponse(content={
         "client_id": "cead2d66-4aa0-49b8-a600-e27b104d6866",
         "client_name": body.get("client_name", "MCP Client"),
         "redirect_uris": body.get("redirect_uris", []),
-        "grant_types": ["authorization_code"],
+        "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],
         "token_endpoint_auth_method": "none",
     }, status_code=201)
@@ -378,5 +387,6 @@ Note: SQLite VACUUM reclaims logical database space but does not guarantee crypt
     }, indent=2)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
