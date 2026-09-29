@@ -82,6 +82,71 @@ class IntegrityFailed(Exception):
 # ------------------------------------------------------------------
 
 
+# Quantization rules — reverse of exporter._entry_to_record.
+# See #135 item 3.
+_BASIS_POINT_FIELDS = (
+    ("confidence_basis_points", "confidence"),
+    ("importance_basis_points", "importance"),
+    ("relevance_basis_points", "relevance"),
+)
+_MILLI_FIELDS = (("utility_score_milli", "utility_score"),)
+_MS_FIELDS = (
+    ("timestamp_ms", "timestamp"),
+    ("last_accessed_ms", "last_accessed"),
+)
+
+
+def _dequantize_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Reverse the int→float quantization done by the exporter.
+
+    The signed wire schema carries only int values (see #135 item 3).
+    On import, we map them back to the float representation that the
+    in-memory ``MemoryEntry`` expects. If a record already carries the
+    float field directly (e.g. a bundle produced by an older exporter
+    that pre-dates this rule), we leave it untouched — the float is
+    still in memory, even though it should never have been on the wire.
+
+    Malformed int values log a warning and fall back to the dataclass
+    default rather than crashing the entire import.
+    """
+    out = dict(record)
+
+    for src, dst in _BASIS_POINT_FIELDS:
+        if src in out and dst not in out:
+            try:
+                out[dst] = float(out[src]) / 10000.0
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Malformed %s=%r on record %r; falling back to default %s",
+                    src, out[src], out.get("entry_id", "unknown"), dst,
+                )
+                out.pop(src, None)
+
+    for src, dst in _MILLI_FIELDS:
+        if src in out and dst not in out:
+            try:
+                out[dst] = float(out[src]) / 1000.0
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Malformed %s=%r on record %r; falling back to default %s",
+                    src, out[src], out.get("entry_id", "unknown"), dst,
+                )
+                out.pop(src, None)
+
+    for src, dst in _MS_FIELDS:
+        if src in out and dst not in out:
+            try:
+                out[dst] = float(out[src]) / 1000.0
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Malformed %s=%r on record %r; falling back to default %s",
+                    src, out[src], out.get("entry_id", "unknown"), dst,
+                )
+                out.pop(src, None)
+
+    return out
+
+
 def _get_local_env_fingerprint() -> Dict[str, str]:
     """Capture the current environment's fingerprint."""
     return {
@@ -290,6 +355,11 @@ def import_bundle(
             continue
 
         # Build MemoryEntry from record
+        # Reverse the float→int quantization done by exporter._entry_to_record
+        # so the in-memory representation stays float (the runtime contract).
+        # See #135 item 3 — floats are forbidden only on the *signed* wire
+        # schema, not in runtime memory.
+        record = _dequantize_record(record)
         entry = MemoryEntry.from_dict(record)
 
         if not entry.metadata:

@@ -12,6 +12,58 @@ import hashlib
 import json
 from typing import Any, Dict, Tuple
 
+
+class FloatInSignedSchemaError(TypeError):
+    """Raised when a ``float`` value is encountered in the signed schema.
+
+    Floats are forbidden because their byte-level representation differs
+    across language runtimes (Python's ``repr`` produces ``"1.0"`` while
+    ECMAScript's ``JSON.stringify`` produces ``"1"`` for integral floats),
+    which would silently break the "same bytes, same hash, same signature"
+    contract that the transfer bundle format depends on.
+
+    Callers must quantize to ``int`` (when the value is integral) or move
+    the value into an unsigned metadata envelope outside the signed body.
+
+    Design choice: rejection (this class) over normalization, because
+    normalization would require a canonical float representation that no
+    existing JSON canonicalization spec (RFC 8785 JCS, OLPC Canonical JSON)
+    agrees on across runtimes — and silent normalization is exactly the
+    failure mode that defeated the reachability firing vector in PR #136.
+
+    Refs: cognicore-dev/cognicore-env#135 (item 3, option 2).
+    """
+
+
+def _reject_floats(obj: Any, path: str = "$") -> None:
+    """Walk *obj* and raise on the first ``float`` encountered.
+
+    Boolean is a subclass of ``int`` in Python, but not of ``float``, so
+    booleans pass through cleanly. Integers and strings are fine.
+
+    The path argument is used only for the error message; it tracks a
+    JSONPath-style location so callers can identify *which* field needs
+    to be quantized.
+    """
+    if isinstance(obj, bool):
+        return
+    if isinstance(obj, float):
+        raise FloatInSignedSchemaError(
+            f"float value at {path} is not allowed in the signed schema; "
+            f"quantize to int (if integral) or move to unsigned metadata. "
+            f"Reason: cross-language byte-level representation of floats "
+            f"breaks the deterministic Ed25519 signature contract. "
+            f"See FloatInSignedSchemaError.__doc__ for the design rationale."
+        )
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            _reject_floats(v, f"{path}.{k}")
+        return
+    if isinstance(obj, (list, tuple)):
+        for i, v in enumerate(obj):
+            _reject_floats(v, f"{path}[{i}]")
+        return
+
 try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
         Ed25519PrivateKey,
@@ -47,7 +99,14 @@ def canonicalize(obj: Any) -> bytes:
 
     Serializes *obj* with sorted keys and compact separators (',', ':'),
     encoded as UTF-8 bytes suitable for deterministic Ed25519 signing.
+
+    Raises ``FloatInSignedSchemaError`` if any ``float`` value is present
+    at any depth in *obj*. See that class's docstring for the rationale
+    and the cross-language rejection contract.
+
+    Refs: cognicore-dev/cognicore-env#135 (item 3, option 2).
     """
+    _reject_floats(obj)
     return json.dumps(
         obj,
         sort_keys=True,
