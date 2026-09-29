@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 
 ROOT_DIR = Path(__file__).parent.parent
-EXTENSION_DIR = ROOT_DIR / "extension"
+EXTENSION_DIR = ROOT_DIR / "plugins" / "claude-desktop-extension"
 BUILD_DIR = ROOT_DIR / "build"
 BUNDLE_NAME = "cognicore-memory.mcpb"
 

@@ -16,7 +16,15 @@ from google import genai
 import cognicore
 
 # ---- Configure ----
-API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyAI9vYS7uL-34zGi7iaoaIwczaJFOA5lu0")
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+API_KEY = os.environ.get("GEMINI_API_KEY")
+if not API_KEY:
+    raise SystemExit("Set GEMINI_API_KEY (see .env.example) before running this script.")
 client = genai.Client(api_key=API_KEY)
 MODEL = "gemini-2.0-flash"
 

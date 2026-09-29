@@ -10,7 +10,7 @@
       "name": "cognicore-memory",
       "description": "Persistent memory for Claude across conversations.",
       "category": "productivity",
-      "source": "./claude-plugin"
+      "source": "./plugins/cognicore-memory"
     }
   ]
 }
