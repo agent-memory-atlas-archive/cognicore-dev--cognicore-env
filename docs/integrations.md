@@ -44,4 +44,4 @@ $env:GITHUB_TOKEN = "ghp_your-token"
 
 CogniCore includes a **Claude plugin** that gives Claude persistent memory across conversations.
 
-👉 See [`claude-plugin/README.md`](../claude-plugin/README.md) for setup instructions.
+👉 See [`plugins/cognicore-memory/README.md`](../plugins/cognicore-memory/README.md) for setup instructions.
