@@ -794,8 +794,22 @@ class TestPromotion:
 # parameter and the trigger (which check runs it) is an argument:
 # point the same vector at the import-time assertion here, and at the
 # periodic reachability sweep when it lands, by changing the target.
+#
+# Follow-up (2026-09-27, tested at 27c0b89, "mutation B"): the same
+# review defeated reachability a second way -- `dark = set()` at the
+# recall seam, check line byte-identical -- and the firing test stayed
+# red (it is semantic: it defeats the recall seam, not the check's
+# source text).  The original textual tripwire, however, could only
+# see one spelling of one line: under the second mutation its
+# detection never engaged, and its own guard produced a misleading
+# "mutation site drifted" red when someone else had already defeated
+# the check.  The tripwire below is the semantic version of itself:
+# it defeats the guarantee with a runtime patch at the recall seam
+# (tests/seam_mutation.py, applied via --seam-mutation inside the
+# subprocess only) instead of rewriting source text, so reformatting
+# cannot make it vacuous, it never touches shared disk state
+# (pytest-xdist safe), and its failure messages mean what they say.
 # ======================================================================
-
 
 class TestReachabilityFires:
     """The missing direct test: a claim that imports clean but is
@@ -855,71 +869,68 @@ class TestReachabilityFires:
                 )
             assert "reachability" in str(exc_info.value)
             assert exc_info.value.verdict == ImportVerdict.INTEGRITY_FAILED
-
-
 class TestVerifierDefeatVector:
-    """Fault injection aimed at the CHECK, not the artifact.
+    """Fault injection aimed at the CHECK'S EFFECT, not its source text.
 
-    Vector: neuter the reachability assertion (`if dark:` ->
-    `if False and dark:`).  Expected verdict: the suite goes red.
-    If the suite stays green with the check defeated, the guarantee is
-    unobservable -- a check nobody has watched fail is a promise, not
-    a guarantee.
+    Vector: defeat reachability at the recall seam -- every query
+    "finds" every stored entry, so `dark` is always empty and the
+    reachability verdict can never fire, while `if dark:` in
+    importer.py stays byte-identical.  Runtime patch, not a source
+    rewrite: the mutation (tests/seam_mutation.py, applied via the
+    --seam-mutation flag) lives only inside the subprocess below.
+
+    Expected verdict: the suite goes red -- specifically the firing
+    test (TestReachabilityFires, the load-bearing detector) must FAIL
+    for the right reason: its dark claim imports clean, so
+    pytest.raises(IntegrityFailed) reports DID NOT RAISE.  Anything
+    else (suite green, detector missing, collection error) is a
+    finding, not a pass.
     """
 
-    IMPORTER = os.path.join(
-        "cognicore", "integrations", "mem0", "importer.py"
+    DETECTOR = (
+        "tests/test_mem0_bridge.py::TestReachabilityFires"
+        "::test_dark_claim_fails_import"
     )
 
-    def _apply_mutation(self):
-        """Apply the one-line neutering to the live source; returns the
-        pristine bytes for restore."""
-        with open(self.IMPORTER, "r", encoding="utf-8") as fh:
-            pristine = fh.read()
-        mutated = pristine.replace(
-            "    if dark:", "    if False and dark:", 1
-        )
-        assert mutated != pristine, (
-            "mutation site drifted: the 'if dark:' reachability check is "
-            "not where this vector expects it. Update the vector to the "
-            "new site -- a moved check and a deleted check are both "
-            "findings."
-        )
-        with open(self.IMPORTER, "w", encoding="utf-8") as fh:
-            fh.write(mutated)
-        return pristine
-
-    @pytest.mark.skipif(
-        os.environ.get("PYTEST_XDIST_WORKER") is not None,
-        reason="mutates importer.py on disk and runs a subprocess suite; "
-        "unsafe under pytest-xdist parallel workers (run serially, or as a "
-        "dedicated CI step)",
-    )
-    def test_reachability_check_defeat_makes_suite_red(self):
+    def test_recall_seam_defeat_makes_firing_test_red(self):
         import subprocess
         import sys
 
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        pristine = self._apply_mutation()
-        try:
-            proc = subprocess.run(
-                [
-                    sys.executable, "-m", "pytest",
-                    "tests/test_mem0_bridge.py", "-q", "--no-header",
-                    "-k", "reachability or dark",
-                ],
-                cwd=repo_root,
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-            assert proc.returncode != 0, (
-                "VERIFIER DEFEAT UNDETECTED: the reachability assertion was "
-                "neutered (if dark -> if False and dark) and the suite "
-                "stayed green. The check is a promise, not a guarantee, "
-                "until some test goes red here.\n\n"
-                + proc.stdout[-2000:]
-            )
-        finally:
-            with open(self.IMPORTER, "w", encoding="utf-8") as fh:
-                fh.write(pristine)
+        proc = subprocess.run(
+            [
+                sys.executable, "-m", "pytest",
+                self.DETECTOR, "-q", "--no-header",
+                "--seam-mutation",
+            ],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        out = proc.stdout + proc.stderr
+
+        # 1. The detector must exist and actually run.
+        assert "no tests ran" not in out, (
+            "MUTATION TARGET ORPHANED: the firing test "
+            f"({self.DETECTOR}) was not collected. A moved detector and "
+            "a deleted detector are both findings -- update the vector "
+            "to the new location.\n\n" + out[-2000:]
+        )
+
+        # 2. The detector must fail for the RIGHT reason: the dark claim
+        #    imported clean (IntegrityFailed never raised) under the
+        #    bright-recall mutation.
+        assert "DID NOT RAISE" in out, (
+            "VERIFIER DEFEAT UNDETECTED: reachability was defeated at the "
+            "recall seam (every query 'finds' every stored entry; `if "
+            "dark:` byte-identical) and the firing test did not report "
+            "DID NOT RAISE. Either the defeat is not reaching the "
+            "importer or the detector's assertion drifted.\n\n"
+            + out[-2000:]
+        )
+        assert proc.returncode != 0, (
+            "VERIFIER DEFEAT UNDETECTED: the recall-seam defeat left the "
+            "firing test green. A check nobody has watched fail is a "
+            "promise, not a guarantee.\n\n" + out[-2000:]
+        )
