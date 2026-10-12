@@ -80,6 +80,20 @@ if not JWT_SECRET:
 
 JWT_ALGORITHM = "HS256"
 
+from cognicore.extension import oauth as _oauth
+
+# Real per-user sign-in for Claude connectors (GitHub). Active when
+# GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are set; see cognicore/extension/oauth.py.
+oauth_server = _oauth.GitHubOAuthServer(JWT_SECRET, JWT_ALGORITHM)
+
+
+def _data_dir() -> Path:
+    """Where per-user databases live. COGNICORE_DATA_DIR points at a persistent volume in deployments."""
+    configured = os.environ.get("COGNICORE_DATA_DIR")
+    base_dir = Path(configured) / "remote" if configured else Path.home() / ".cognicore" / "remote"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    return base_dir
+
 def get_user_id(request_obj) -> str:
     """Extract and validate user_id from the Authorization JWT or x-anthropic-client header.
     request_obj can be a Starlette Request or an MCP RequestContext.
@@ -144,6 +158,8 @@ def get_user_id(request_obj) -> str:
         
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if not _oauth.is_access_token_payload(payload):
+            raise HTTPException(status_code=401, detail="Invalid JWT")
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="JWT missing 'sub' claim")
@@ -153,8 +169,7 @@ def get_user_id(request_obj) -> str:
 
 def get_db_path_for_user(user_id: str) -> str:
     """Creates a secure, sanitized path for a user's memory database."""
-    base_dir = Path.home() / ".cognicore" / "remote"
-    base_dir.mkdir(parents=True, exist_ok=True)
+    base_dir = _data_dir()
     # Prevent path traversal by hashing the user ID
     safe_id = hashlib.sha256(user_id.encode("utf-8")).hexdigest()
     return str(base_dir / f"memory_{safe_id}.db")
@@ -228,8 +243,7 @@ def _get_commerce_db_path() -> str:
     """Returns the shared commerce database path."""
     global _commerce_db_path
     if _commerce_db_path is None:
-        commerce_dir = Path.home() / ".cognicore" / "remote"
-        commerce_dir.mkdir(parents=True, exist_ok=True)
+        commerce_dir = _data_dir()
         _commerce_db_path = str(commerce_dir / "commerce.db")
     return _commerce_db_path
 
@@ -1314,34 +1328,32 @@ class AuthMiddleware:
                 print(f"[AUTH] Middleware: accepting x-anthropic-client: {anthropic_client[:40]}")
                 return await self.app(scope, receive, send)
                     
+            async def unauthorized(body: bytes):
+                # Claude starts OAuth sign-in only on a 401 whose WWW-Authenticate
+                # header points at the protected-resource metadata.
+                challenge = _oauth.www_authenticate(_oauth.base_url_from_scope(scope), path)
+                await send({"type": "http.response.start", "status": 401, "headers": [
+                    (b"content-type", b"text/plain"),
+                    (b"www-authenticate", challenge.encode("latin-1")),
+                ]})
+                await send({"type": "http.response.body", "body": body})
+
             if not token:
-                async def send_wrapper(message):
-                    if message["type"] == "http.response.start":
-                        message["status"] = 401
-                        message["headers"] = [(b"content-type", b"text/plain")]
-                    elif message["type"] == "http.response.body":
-                        header_keys = ", ".join([k.decode("utf-8") for k in headers.keys()])
-                        message["body"] = (
-                            f"Missing or invalid authentication credentials. Received headers: {header_keys}"
-                        ).encode("utf-8")
-                    await send(message)
-                
-                # Mock a 401 response directly
-                await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"text/plain")]})
                 header_keys = ", ".join([k.decode("utf-8") for k in headers.keys()])
                 error_msg = f"Missing or invalid authentication credentials. Received headers: {header_keys}"
-                await send({"type": "http.response.body", "body": error_msg.encode("utf-8")})
+                await unauthorized(error_msg.encode("utf-8"))
                 return
 
             try:
                 payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+                if not _oauth.is_access_token_payload(payload):
+                    await unauthorized(b"Invalid JWT: not an access token")
+                    return
                 if not payload.get("sub"):
-                    await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"text/plain")]})
-                    await send({"type": "http.response.body", "body": b"JWT missing 'sub' claim"})
+                    await unauthorized(b"JWT missing 'sub' claim")
                     return
             except jwt.InvalidTokenError as e:
-                await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"text/plain")]})
-                await send({"type": "http.response.body", "body": f"Invalid JWT: {str(e)}".encode("utf-8")})
+                await unauthorized(f"Invalid JWT: {str(e)}".encode("utf-8"))
                 return
                 
         return await self.app(scope, receive, send)
@@ -1357,8 +1369,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create Starlette app and mount it
+# Create Starlette app and mount it. One /mcp mount serves both transports:
+# legacy SSE at /mcp/sse (+ /mcp/messages/) and Streamable HTTP at /mcp/stream,
+# which Claude prefers now that SSE is deprecated.
 mcp_app = mcp.sse_app()
+if hasattr(mcp, "streamable_http_app"):
+    from contextlib import asynccontextmanager
+
+    mcp.settings.streamable_http_path = "/stream"
+    mcp.settings.stateless_http = True
+    mcp_app.router.routes.extend(mcp.streamable_http_app().router.routes)
+    _base_lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def _lifespan_with_mcp_sessions(asgi_app):
+        async with mcp.session_manager.run(), _base_lifespan(asgi_app):
+            yield
+
+    app.router.lifespan_context = _lifespan_with_mcp_sessions
 
 @app.get("/health")
 def health_check():
@@ -1366,8 +1394,29 @@ def health_check():
 
 from fastapi import status
 
+# ── OAuth for Claude connectors ──────────────────────────────────────────────
+# With GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET set, these routes are a real OAuth
+# 2.1 server (DCR + PKCE) that signs users in with GitHub; see oauth.py.
+# Otherwise the legacy mock flow below is available only when
+# COGNICORE_ALLOW_INSECURE_AUTH is set, and every route returns 404 by default.
+
+@app.get("/.well-known/oauth-protected-resource")
+@app.get("/.well-known/oauth-protected-resource/mcp/sse")
+def oauth_protected_resource_sse(request: Request):
+    if not _oauth.github_enabled():
+        raise HTTPException(status_code=404)
+    return oauth_server.protected_resource_metadata(request, _oauth.SSE_RESOURCE_PATH)
+
+@app.get("/.well-known/oauth-protected-resource/mcp/stream")
+def oauth_protected_resource_stream(request: Request):
+    if not _oauth.github_enabled():
+        raise HTTPException(status_code=404)
+    return oauth_server.protected_resource_metadata(request, _oauth.STREAM_RESOURCE_PATH)
+
 @app.get("/.well-known/oauth-authorization-server")
 def oauth_metadata(request: Request):
+    if _oauth.github_enabled():
+        return oauth_server.authorization_server_metadata(request)
     # These endpoints implement a mock OAuth flow, not a real identity-provider
     # exchange. Hide the entire flow unless a developer explicitly enables it.
     if not INSECURE_AUTH_ENABLED:
@@ -1384,6 +1433,8 @@ def oauth_metadata(request: Request):
 
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_client(request: Request):
+    if _oauth.github_enabled():
+        return await oauth_server.register(request)
     if not INSECURE_AUTH_ENABLED:
         raise HTTPException(status_code=404)
     try:
@@ -1402,13 +1453,33 @@ async def register_client(request: Request):
     }
 
 @app.get("/authorize")
-def authorize(redirect_uri: str, state: str):
+def authorize(request: Request):
+    if _oauth.github_enabled():
+        return oauth_server.authorize(request)
     if not INSECURE_AUTH_ENABLED:
         raise HTTPException(status_code=404)
+    redirect_uri = request.query_params.get("redirect_uri")
+    state = request.query_params.get("state")
+    if not redirect_uri or state is None:
+        raise HTTPException(status_code=422, detail="redirect_uri and state are required")
     return RedirectResponse(url=f"{redirect_uri}?code=mock_auth_code&state={state}")
+
+@app.get("/authorize/github")
+def authorize_github(request: Request):
+    if not _oauth.github_enabled():
+        raise HTTPException(status_code=404)
+    return oauth_server.authorize_github(request)
+
+@app.get(_oauth.CALLBACK_PATH)
+async def github_oauth_callback(request: Request):
+    if not _oauth.github_enabled():
+        raise HTTPException(status_code=404)
+    return await oauth_server.github_callback(request)
 
 @app.post("/token")
 async def token(request: Request):
+    if _oauth.github_enabled():
+        return await oauth_server.token(request)
     if not INSECURE_AUTH_ENABLED:
         raise HTTPException(status_code=404)
     # Generate a real JWT token instead of a mock string
@@ -1671,8 +1742,7 @@ async def figma_webhook(request: Request):
 
     # Store in the shared backend (user = figma_webhook)
     from cognicore.memory import SQLiteMemoryBackend, MemoryEntry, MemoryScope
-    db_dir = Path.home() / ".cognicore" / "remote"
-    db_dir.mkdir(parents=True, exist_ok=True)
+    db_dir = _data_dir()
     webhook_backend = SQLiteMemoryBackend(str(db_dir / "figma_webhooks.db"))
     webhook_backend._init_db()
 
