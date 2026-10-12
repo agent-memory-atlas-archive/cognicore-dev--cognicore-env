@@ -7,7 +7,9 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/cognicore-env)](https://pypi.org/project/cognicore-env/)
 
-[![Watch the 56-second demo](docs/demo-poster.svg)](https://github.com/cognicore-dev/cognicore-env/releases/download/demo-video/cognicore-demo.mp4)
+<video src="https://github.com/cognicore-dev/cognicore-env/releases/download/demo-video/cognicore-demo.mp4" controls muted playsinline width="100%"></video>
+
+▶ **[Watch the demo](https://github.com/cognicore-dev/cognicore-env/releases/download/demo-video/cognicore-demo.mp4)** — 56 seconds: an agent that remembers across sessions.
 
 ---
 
