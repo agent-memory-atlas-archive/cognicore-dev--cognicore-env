@@ -183,3 +183,18 @@ def test_callback_from_another_browser_is_refused(github):
     victim = TestClient(remote.app)  # no nonce cookie
     response = victim.get(oauth.CALLBACK_PATH, params={"code": "gh-code-alice", "state": gh_state}, follow_redirects=False)
     assert response.status_code == 400 and "location" not in response.headers
+
+
+def test_consent_page_cancel_and_security_headers(github):
+    _, challenge = _pkce()
+    page = TestClient(remote.app).get("/authorize", params={
+        "response_type": "code", "client_id": "c", "redirect_uri": "https://claude.ai/api/mcp/auth_callback",
+        "code_challenge": challenge, "code_challenge_method": "S256", "state": "st8",
+    })
+    assert page.status_code == 200 and "Connect Claude to CogniCore Memory" in page.text
+    cancel = re.search(r'class="btn secondary" href="([^"]+)"', page.text).group(1).replace("&amp;", "&")
+    query = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(cancel).query))
+    assert cancel.startswith("https://claude.ai/api/mcp/auth_callback?")
+    assert query["error"] == "access_denied" and query["state"] == "st8"
+    assert "frame-ancestors 'none'" in page.headers["content-security-policy"]
+    assert page.headers["x-frame-options"] == "DENY"
