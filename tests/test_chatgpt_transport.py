@@ -24,3 +24,15 @@ def test_messages_endpoint_exists():
     """Verify the /messages/ POST endpoint exists for MCP."""
     response = client.post("/mcp/messages/")
     assert response.status_code in (400, 404, 422, 500)
+
+def test_record_experience_attempts_accepts_null():
+    """attempts advertises "default": null, so its schema must allow null."""
+    import asyncio
+
+    from cognicore.integrations.chatgpt import mcp
+
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    schema = tools["cognicore_record_experience"].inputSchema["properties"]["attempts"]
+    assert schema.get("default") is None
+    allowed = [option.get("type") for option in schema.get("anyOf", [schema])]
+    assert "null" in allowed, schema

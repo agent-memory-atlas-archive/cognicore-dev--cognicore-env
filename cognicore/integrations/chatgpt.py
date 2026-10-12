@@ -211,7 +211,7 @@ def cognicore_record_experience(
     solution: str,
     ctx: Context,
     why_it_worked: str = "",
-    attempts: list = None,
+    attempts: Optional[list] = None,
 ) -> Any:
     """Record a structured experience from a completed task."""
     try:
