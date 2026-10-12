@@ -3,7 +3,9 @@
   dockerfilePath = "Dockerfile"
 
 [deploy]
-  startCommand = "uvicorn cognicore.integrations.chatgpt:app --host 0.0.0.0 --port $PORT"
+  # Railway runs Dockerfile start commands in exec form (no variable expansion),
+  # so wrap in a shell for $PORT to be substituted.
+  startCommand = '/bin/sh -c "exec uvicorn cognicore.extension.remote:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips=*"'
   healthcheckPath = "/health"
   healthcheckTimeout = 10
   restartPolicyType = "on_failure"
