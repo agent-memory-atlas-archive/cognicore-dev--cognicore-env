@@ -182,6 +182,21 @@ CogniCore ships an MCP server, so MCP clients get persistent memory with no code
 }
 ```
 
+#### Hosted endpoint
+
+A hosted instance is live — no install, no local process to manage:
+
+```
+https://mcp.cognicoree.tech/mcp/stream
+```
+
+Health check: `https://mcp.cognicoree.tech/health` returns `{"status":"ok","version":"1.0"}`.
+
+Add it as a custom connector in any MCP-compatible client (Claude, Claude Code, Cursor, Sarvam
+Cowork) and sign in with GitHub. The server is its own OAuth 2.1 authorization server, and each
+GitHub account gets its own memory database — see
+[`docs/remote-mcp-server.md`](docs/remote-mcp-server.md).
+
 ### Claude plugin
 
 A Claude plugin that gives Claude persistent memory across conversations — see
