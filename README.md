@@ -1,5 +1,7 @@
 # CogniCore
 
+<!-- mcp-name: io.github.cognicore-dev/cognicore-env -->
+
 **Persistent memory, reflection and safety for AI agents — with zero mandatory dependencies.**
 
 [![PyPI](https://img.shields.io/pypi/v/cognicore-env)](https://pypi.org/project/cognicore-env/)
