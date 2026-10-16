@@ -10,8 +10,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
-from cognicore.integrations.auth import validate_token, AuthError, get_jwks_client
-from cognicore.integrations.chatgpt import get_backend_for_user, cognicore_recall_experience, cognicore_record_experience
+from cognicore.connectors.supabase_auth import validate_token, AuthError, get_jwks_client
+from cognicore.connectors.chatgpt import get_backend_for_user, cognicore_recall_experience, cognicore_record_experience
 
 @pytest.fixture(scope="module")
 def rs256_keys():
@@ -208,8 +208,8 @@ def test_tenant_isolation_tool_arguments_bypass():
     uid_a = str(uuid.uuid4())
     uid_b = str(uuid.uuid4())
     
-    with patch("cognicore.integrations.chatgpt.require_auth", return_value=uid_a):
-        with patch("cognicore.integrations.chatgpt.get_backend_for_user") as mock_backend:
+    with patch("cognicore.connectors.chatgpt.require_auth", return_value=uid_a):
+        with patch("cognicore.connectors.chatgpt.get_backend_for_user") as mock_backend:
             mock_backend.return_value = MagicMock()
             
             malicious_query = f"query with {uid_b} or ../memory_{uid_b}.db"

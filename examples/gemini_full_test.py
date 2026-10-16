@@ -160,8 +160,8 @@ def phase3(agent):
 
 def phase4():
     sep("PHASE 4: Curriculum + Analytics (offline)")
-    from cognicore.curriculum import CurriculumRunner
-    from cognicore.smart_agents import AutoLearner
+    from cognicore.agents.smart import AutoLearner
+    from cognicore.training.curriculum import CurriculumRunner
     runner = CurriculumRunner("SafetyClassification-v1", AutoLearner())
     result = runner.run(max_episodes=2, verbose=False)
     print(f"  Curriculum: {result['episodes']} eps, final_diff={result.get('final_difficulty','N/A')}")
@@ -170,8 +170,8 @@ def phase4():
 
 def phase5():
     sep("PHASE 5: Safety Layer + Cost Tracker (offline)")
-    from cognicore.cost_tracker import CostTracker
-    from cognicore.safety_layer import SafetyLayer
+    from cognicore.observability.cost_tracker import CostTracker
+    from cognicore.safety.layer import SafetyLayer
     tracker = CostTracker(model_name="gemini-flash")
     tracker.record_call(input_tokens=500, output_tokens=100)
     print(f"  Cost: ${tracker.total_cost:.6f} for {tracker.total_input_tokens}+{tracker.total_output_tokens} tokens")
@@ -183,10 +183,10 @@ def phase5():
 
 def phase6():
     sep("PHASE 6: Cognitive Memory + IQ + Failure Prediction (offline)")
-    from cognicore.multi_memory import CognitiveMemory
-    from cognicore.predictive import FailurePredictor
-    from cognicore.intelligence import IntelligenceScorer
-    from cognicore.smart_agents import AutoLearner
+    from cognicore.memory.multi_tier import CognitiveMemory
+    from cognicore.observability.predictive import FailurePredictor
+    from cognicore.evaluation.intelligence import IntelligenceScorer
+    from cognicore.agents.smart import AutoLearner
 
     mem = CognitiveMemory()
     mem.perceive("phishing email", "security", True, "UNSAFE")
@@ -206,10 +206,10 @@ def phase6():
 
 def phase7(agent):
     sep("PHASE 7: Persistence + Cache + Profiles + Augment (offline)")
-    from cognicore.persistence import save_agent
-    from cognicore.profiles import list_profiles, get_profile
-    from cognicore.cache import ResponseCache
-    from cognicore.augmentation import DataAugmenter
+    from cognicore.agents.persistence import save_agent
+    from cognicore.core.profiles import list_profiles, get_profile
+    from cognicore.utils.cache import ResponseCache
+    from cognicore.evaluation.augmentation import DataAugmenter
 
     path = "temp_agent.json"
     r = save_agent(agent, path)
@@ -233,12 +233,12 @@ def phase7(agent):
 
 def phase8(agent):
     sep("PHASE 8: Swarm + Strategy + Causal + Builder (offline)")
-    from cognicore.strategy import StrategySwitcher
-    from cognicore.agent_builder import build_agent, describe_agent
-    from cognicore.causal import CausalEngine
-    from cognicore.meta_rewards import MetaRewardOptimizer
-    from cognicore.swarm import Swarm
-    from cognicore.lifelong import LifelongAgent
+    from cognicore.agents.strategy import StrategySwitcher
+    from cognicore.agents.builder import build_agent, describe_agent
+    from cognicore.observability.causal import CausalEngine
+    from cognicore.training.meta_rewards import MetaRewardOptimizer
+    from cognicore.agents.swarm import Swarm
+    from cognicore.agents.lifelong import LifelongAgent
 
     sw = StrategySwitcher()
     print(f"  Strategy: low_acc={sw.decide(accuracy=0.2)}, high_acc={sw.decide(accuracy=0.9)}")

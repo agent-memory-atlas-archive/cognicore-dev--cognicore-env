@@ -1,7 +1,7 @@
-"""Tests for cognicore.analytics — PerformanceAnalyzer, AnalyticsReport."""
+"""Tests for cognicore.evaluation.analytics — PerformanceAnalyzer, AnalyticsReport."""
 
 import cognicore
-from cognicore.analytics import PerformanceAnalyzer
+from cognicore.evaluation.analytics import PerformanceAnalyzer
 
 
 class TestPerformanceAnalyzerRecord:

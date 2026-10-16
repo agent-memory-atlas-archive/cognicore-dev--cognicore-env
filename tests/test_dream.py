@@ -1,6 +1,6 @@
 import unittest
 import random
-from cognicore.dream import DreamEngine, DreamEvent
+from cognicore.experimental.dream import DreamEngine, DreamEvent
 
 class DummyEnvModel:
     def simulate(self, state, action):

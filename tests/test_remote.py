@@ -1,8 +1,8 @@
 import pytest
 import jwt
 from fastapi.testclient import TestClient
-from cognicore.extension import remote
-from cognicore.extension.remote import app, JWT_SECRET, JWT_ALGORITHM, get_db_path_for_user
+from cognicore.connectors import remote
+from cognicore.connectors.remote import app, JWT_SECRET, JWT_ALGORITHM, get_db_path_for_user
 
 client = TestClient(app)
 
@@ -104,7 +104,7 @@ def test_db_path_sanitization():
 
 
 def test_apply_auto_compression():
-    from cognicore.extension.remote import apply_auto_compression
+    from cognicore.connectors.remote import apply_auto_compression
     from unittest.mock import MagicMock, patch
 
     mock_ctx = MagicMock()
@@ -123,7 +123,7 @@ def test_apply_auto_compression():
     mock_backend = MagicMock()
     mock_backend.store.return_value = 42
 
-    with patch("cognicore.extension.remote.get_backend", return_value=mock_backend):
+    with patch("cognicore.connectors.remote.get_backend", return_value=mock_backend):
         out = apply_auto_compression(mock_ctx, long_conv, "Original tool output")
         assert "Context compressed." in out
         assert "Summary of previous discussion attached." in out

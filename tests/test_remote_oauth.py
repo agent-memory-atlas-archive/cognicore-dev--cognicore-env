@@ -1,4 +1,4 @@
-"""OAuth 2.1 + GitHub sign-in for the remote MCP server (cognicore/extension/oauth.py).
+"""OAuth 2.1 + GitHub sign-in for the remote MCP server (cognicore/connectors/oauth.py).
 
 GitHub is replaced by a stub of ``oauth._http_json``; everything else runs through
 the real FastAPI routes and AuthMiddleware.
@@ -13,7 +13,7 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from cognicore.extension import oauth, remote
+from cognicore.connectors import oauth, remote
 
 REDIRECT = "http://localhost:53682/callback"
 GITHUB_USERS = {"gh-code-alice": (1001, "alice"), "gh-code-bob": (2002, "bob")}

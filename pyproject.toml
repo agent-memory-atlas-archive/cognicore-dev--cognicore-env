@@ -91,7 +91,7 @@ line-length = 120
 extend-ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"cognicore/dashboard.py" = ["E501"]
+"cognicore/ui/dashboard.py" = ["E501"]
 "cognicore/envs/data/*.py" = ["E501"]
 "tests/*.py" = ["E501"]
 

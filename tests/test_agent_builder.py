@@ -1,7 +1,7 @@
-"""Tests for cognicore.agent_builder — build_agent, describe_agent."""
+"""Tests for cognicore.agents.builder — build_agent, describe_agent."""
 
-from cognicore.agent_builder import build_agent, describe_agent
-from cognicore.smart_agents import AutoLearner, SafeAgent, AdaptiveAgent
+from cognicore.agents.builder import build_agent, describe_agent
+from cognicore.agents.smart import AutoLearner, SafeAgent, AdaptiveAgent
 
 
 class TestBuildAgent:

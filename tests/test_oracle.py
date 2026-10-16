@@ -1,5 +1,5 @@
 import unittest
-from cognicore.oracle import Oracle
+from cognicore.experimental.oracle import Oracle
 
 class DummyAgent:
     def act(self, obs):

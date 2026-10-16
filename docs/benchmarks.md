@@ -28,5 +28,5 @@ At small window sizes — where token efficiency matters — the Multi-Hop Adapt
 Run the benchmark yourself:
 
 ```bash
-python cognicore_benchmarks/longmemeval/runner.py
+python benchmarks/longmemeval/runner.py
 ```

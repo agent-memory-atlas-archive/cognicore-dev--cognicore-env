@@ -159,7 +159,7 @@ The gain is largest where token efficiency matters. At 20 chunks brute force cat
 report that rather than hiding it.
 
 ```bash
-python cognicore_benchmarks/longmemeval/runner.py
+python benchmarks/longmemeval/runner.py
 ```
 
 **Known limitation:** lexical (TF-IDF/BM25) retrieval misses when session vocabulary differs from
@@ -218,7 +218,7 @@ Export a sealed bundle (Ed25519-signed, deterministic canonical JSON):
 ```python
 from cognicore.integrations.mem0 import export_bundle
 from cognicore.integrations.mem0.crypto import generate_keypair
-from cognicore.memory_manager import MemoryManager
+from cognicore.memory.manager import MemoryManager
 
 private_key, public_key = generate_keypair()
 receipt = export_bundle(
@@ -290,6 +290,22 @@ pip install cognicore-env[all]     # everything
 | `ImportError` for torch / gymnasium | Those are optional: `pip install cognicore-env[rl]` |
 | `cognicore` command not found | `pip install -e .` then retry |
 | Windows encoding errors | `$env:PYTHONIOENCODING = "utf-8"` |
+
+---
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| [`cognicore/`](cognicore/) | The library: memory, agents, environments, safety, evaluation, training, observability, and the hosted MCP connectors (`cognicore/connectors/`) |
+| [`tests/`](tests/) | Test suite |
+| [`benchmarks/`](benchmarks/) | LongMemEval and agent-learning benchmark harnesses |
+| [`examples/`](examples/) | Runnable examples and demo walkthroughs |
+| [`plugins/`](plugins/) | Claude Code plugins and the Claude Desktop extension |
+| [`docs/`](docs/) | Documentation |
+| [`scripts/`](scripts/) | Developer and verification scripts |
+
+The module-by-module map is in [CONTRIBUTING.md](CONTRIBUTING.md#module-map).
 
 ---
 

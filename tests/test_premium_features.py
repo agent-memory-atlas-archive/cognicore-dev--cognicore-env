@@ -1,13 +1,13 @@
 """Tests for Phase 5 premium features."""
 
 import cognicore
-from cognicore.advanced_memory import SemanticMemory
-from cognicore.explainer import Explainer
-from cognicore.adversarial import AdversarialTester
-from cognicore.smart_agents import AutoLearner, SafeAgent, AdaptiveAgent
-from cognicore.auto_improve import auto_improve
-from cognicore.safety_layer import SafetyLayer, Policy
-from cognicore.cost_tracker import CostTracker
+from cognicore.memory.semantic import SemanticMemory
+from cognicore.observability.explainer import Explainer
+from cognicore.safety.adversarial import AdversarialTester
+from cognicore.agents.smart import AutoLearner, SafeAgent, AdaptiveAgent
+from cognicore.training.auto_improve import auto_improve
+from cognicore.safety.layer import SafetyLayer, Policy
+from cognicore.observability.cost_tracker import CostTracker
 
 
 class TestSemanticMemory:

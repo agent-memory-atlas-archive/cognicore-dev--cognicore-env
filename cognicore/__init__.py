@@ -24,6 +24,10 @@ Quick start::
 
 __version__ = "0.10.3"
 
+# Old module paths (e.g. cognicore.advanced_memory) keep working after the
+# restructure; importing _compat installs them. See cognicore/_compat.py.
+from cognicore import _compat
+
 # Core
 from cognicore.core.base_env import CogniCoreEnv
 from cognicore.core.types import (
@@ -86,63 +90,63 @@ from cognicore.adapters.gymnasium import GymnasiumAdapter
 
 
 # Persistence & Leaderboard
-from cognicore.memory_manager import MemoryManager
-from cognicore.leaderboard import Leaderboard
+from cognicore.memory.manager import MemoryManager
+from cognicore.evaluation.leaderboard import Leaderboard
 
 # Fine-tuning
-from cognicore.finetuning import EpisodeRecorder
+from cognicore.training.finetuning import EpisodeRecorder
 
 # Multi-agent
-from cognicore.multi_agent import MultiAgentEnv, DebateEnv
+from cognicore.envs.multi_agent_base import MultiAgentEnv, DebateEnv
 
 # Advanced features
-from cognicore.curriculum import CurriculumRunner
-from cognicore.benchmark import benchmark_agent, BenchmarkResult
-from cognicore.compose import Pipeline
-from cognicore.analytics import PerformanceAnalyzer
-from cognicore.experiment import Experiment
+from cognicore.training.curriculum import CurriculumRunner
+from cognicore.evaluation.benchmark import benchmark_agent, BenchmarkResult
+from cognicore.envs.compose import Pipeline
+from cognicore.evaluation.analytics import PerformanceAnalyzer
+from cognicore.evaluation.experiment import Experiment
 
 # Premium features
-from cognicore.advanced_memory import SemanticMemory
+from cognicore.memory.semantic import SemanticMemory
 Memory = SemanticMemory
-from cognicore.explainer import Explainer
-from cognicore.adversarial import AdversarialTester
-from cognicore.smart_agents import AutoLearner, SafeAgent, AdaptiveAgent
-from cognicore.auto_improve import auto_improve
-from cognicore.safety_layer import SafetyLayer, Policy
-from cognicore.cost_tracker import CostTracker
+from cognicore.observability.explainer import Explainer
+from cognicore.safety.adversarial import AdversarialTester
+from cognicore.agents.smart import AutoLearner, SafeAgent, AdaptiveAgent
+from cognicore.training.auto_improve import auto_improve
+from cognicore.safety.layer import SafetyLayer, Policy
+from cognicore.observability.cost_tracker import CostTracker
 
 # Research-grade features
-from cognicore.predictive import FailurePredictor
-from cognicore.multi_memory import CognitiveMemory, UnifiedMemory
-from cognicore.red_blue import RedVsBlue
-from cognicore.debugger import AIDebugger
-from cognicore.intelligence import IntelligenceScorer
-from cognicore.thought_trace import ThoughtTracer
-from cognicore.knowledge_transfer import transfer_knowledge, MentorStudent
-from cognicore.evolution import EvolutionEngine
+from cognicore.observability.predictive import FailurePredictor
+from cognicore.memory.multi_tier import CognitiveMemory, UnifiedMemory
+from cognicore.safety.red_blue import RedVsBlue
+from cognicore.observability.debugger import AIDebugger
+from cognicore.evaluation.intelligence import IntelligenceScorer
+from cognicore.observability.thought_trace import ThoughtTracer
+from cognicore.agents.knowledge_transfer import transfer_knowledge, MentorStudent
+from cognicore.training.evolution import EvolutionEngine
 
 # Platform features
-from cognicore.persistence import save_agent, load_agent
-from cognicore.report import ReportGenerator
+from cognicore.agents.persistence import save_agent, load_agent
+from cognicore.evaluation.report import ReportGenerator
 from cognicore.replay import EventRecorder, TaskReplayer, TaskBrancher, RLNavigator
 from cognicore.immune import NexusShield, RLDefender
-from cognicore.profiles import get_profile, list_profiles
-from cognicore.prompt_optimizer import PromptOptimizer
-from cognicore.webhooks import AlertSystem
-from cognicore.augmentation import DataAugmenter
-from cognicore.fingerprint import AgentFingerprint
-from cognicore.difficulty import DifficultyEstimator
-from cognicore.rate_limiter import RateLimiter
-from cognicore.cache import ResponseCache
+from cognicore.core.profiles import get_profile, list_profiles
+from cognicore.training.prompt_optimizer import PromptOptimizer
+from cognicore.observability.webhooks import AlertSystem
+from cognicore.evaluation.augmentation import DataAugmenter
+from cognicore.agents.fingerprint import AgentFingerprint
+from cognicore.evaluation.difficulty import DifficultyEstimator
+from cognicore.utils.rate_limiter import RateLimiter
+from cognicore.utils.cache import ResponseCache
 
 # Phase 8 — Roadmap features
-from cognicore.meta_rewards import MetaRewardOptimizer
-from cognicore.causal import CausalEngine
-from cognicore.agent_builder import build_agent, describe_agent
-from cognicore.strategy import StrategySwitcher
-from cognicore.lifelong import LifelongAgent
-from cognicore.swarm import Swarm
+from cognicore.training.meta_rewards import MetaRewardOptimizer
+from cognicore.observability.causal import CausalEngine
+from cognicore.agents.builder import build_agent, describe_agent
+from cognicore.agents.strategy import StrategySwitcher
+from cognicore.agents.lifelong import LifelongAgent
+from cognicore.agents.swarm import Swarm
 
 __all__ = [
     # Version
@@ -248,3 +252,5 @@ __all__ = [
     "LifelongAgent",
     "Swarm",
 ]
+
+_compat.alias_loaded()

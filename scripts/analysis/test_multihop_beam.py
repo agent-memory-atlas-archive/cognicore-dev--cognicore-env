@@ -7,9 +7,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
 
-from cognicore_benchmarks.longmemeval.adapters.cognicore_multihop_adapter import CognicoreMultiHopAdapter
-from cognicore_benchmarks.longmemeval.evaluate import get_anscheck_prompt
-from cognicore_benchmarks.common.llm_client import LLMClient
+from benchmarks.longmemeval.adapters.cognicore_multihop_adapter import CognicoreMultiHopAdapter
+from benchmarks.longmemeval.evaluate import get_anscheck_prompt
+from benchmarks.common.llm_client import LLMClient
 
 def main():
     transcript_file = r"C:\Users\kaush\OneDrive\Documents\safetymind\transcript-beam-small-cognicore.jsonl"

@@ -1,37 +1,63 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.coverage
+
+# Environments and secrets
 .env
 .venv/
 venv/
-*.bin
-*.zip
-*.json
-!openenv.yaml
-test_imports.py
 
-# Database and binary artifacts
+# Editors
+.vscode/
+
+# Databases and binary artifacts
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 *.log
-id_lhr*
-cloudflared.exe
-benchmark_output/
-content_studio/output/
+*.bin
+*.zip
 *.mp3
 *.mp4
 *.pptx
+*.passport
+id_lhr*
+cloudflared.exe
 
-# Scratch & temporary scripts
-fix*.py
-test_sec*.py
-update*.py
-orig_remote.py
-test_fastmcp.py
-test_sarvam_tokens.py
+# JSON is mostly generated output (memory stores, benchmark results, exports),
+# written relative to wherever the code runs. Config JSON is listed explicitly.
+*.json
+!server.json
+!.claude-plugin/*.json
+!plugins/**/*.json
+!tests/fixtures/**/*.json
 
+# Generated output (benchmarks, experiments, local memory stores)
+/results/
+benchmark_output/
+/experiments/
+cognicore_data/
+content_studio/output/
+trajectories_export.jsonl
+ablation_results.json
+nexus_policy_model.json
 
+# Nested checkout used for local experiments
+scratch_repo/
+
+# Local scratch scripts at the repo root
+/fix*.py
+/update*.py
+/test_sec*.py
+/test_imports.py
+/orig_remote.py
+/test_fastmcp.py
+/test_sarvam_tokens.py
