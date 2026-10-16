@@ -1,5 +1,5 @@
 import unittest
-from cognicore.timetravel import TimeTraveler, TimelineNode, TimelineTree
+from cognicore.experimental.timetravel import TimeTraveler, TimelineNode, TimelineTree
 
 class DummyEvent:
     def __init__(self, action, reward, obs="obs"):

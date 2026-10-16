@@ -108,17 +108,73 @@ graph TB
 
 ## Module Map
 
-| Directory | Purpose | Key Files |
+### The `cognicore` package (what ships on PyPI)
+
+| Directory | Purpose | Key files |
 |---|---|---|
-| `cognicore/core/` | Core runtime, config, base classes | `runtime.py`, `config.py`, `protocol.py` |
-| `cognicore/memory/` | Memory backend ABC and all implementations | `backend.py`, `tfidf.py`, `sqlite.py`, `embedding.py`, `graph.py` |
-| `cognicore/middleware/` | Reflection, rewards, safety, propose-revise | `reflection.py`, `rewards.py`, `safety.py` |
-| `cognicore/mcp/` | Model Context Protocol server | `server.py`, `tools.py` |
-| `cognicore/envs/` | Gymnasium-compatible environments | `base.py`, `safety.py`, `code_bugs.py` |
-| `cognicore/immune/` | Agent Immune System (anomaly detection) | `detector.py`, `response.py` |
-| `cognicore/replay/` | Replay Time Travel with RL | `buffer.py`, `persistence.py` |
-| `cognicore/agents/` | Built-in agent implementations | `base.py`, `random_agent.py`, `smart_agents.py` |
-| `cognicore/integrations/` | LangChain, CrewAI, and other framework adapters | `langchain.py`, `crewai.py` |
+| `cognicore/runtime.py` | `CogniCoreRuntime`, the universal cognition wrapper | |
+| `cognicore/cli.py` | The `cognicore` command | |
+| `cognicore/core/` | Base environment, types, spaces, errors, config profiles | `base_env.py`, `types.py`, `api.py`, `profiles.py` |
+| `cognicore/memory/` | Memory backend ABC, all backends, semantic and multi-tier memory | `base.py`, `sqlite_backend.py`, `tfidf_backend.py`, `semantic.py`, `manager.py`, `multi_tier.py` |
+| `cognicore/experience/` | Structured, verified experience memory | `manager.py`, `schema.py`, `verification.py` |
+| `cognicore/middleware/` | Reflection, rewards, propose-revise, safety monitor | `reflection.py`, `rewards.py`, `safety_monitor.py` |
+| `cognicore/agents/` | Built-in agents, agent builder, persistence, lifelong learning, swarms | `base_agent.py`, `smart.py`, `builder.py`, `persistence.py` |
+| `cognicore/envs/` | Environments, the registry, pipelines, multi-agent base | `registry.py`, `compose.py`, `multi_agent_base.py` |
+| `cognicore/safety/` | Safety layer, adversarial testing, red vs blue | `layer.py`, `adversarial.py`, `red_blue.py` |
+| `cognicore/evaluation/` | Benchmarking agents, leaderboards, analytics, reports, A/B experiments | `benchmark.py`, `leaderboard.py`, `analytics.py`, `report.py` |
+| `cognicore/training/` | Curricula, evolution, auto-improvement, reward tuning, fine-tuning export | `curriculum.py`, `evolution.py`, `finetuning.py` |
+| `cognicore/observability/` | Debugger, explainer, thought traces, failure prediction, cost, alerts | `debugger.py`, `explainer.py`, `cost_tracker.py` |
+| `cognicore/replay/` | Recording, replay and branching | `recorder.py`, `replayer.py`, `brancher.py` |
+| `cognicore/immune/` | Agent immune system (threat detection) | `shield.py`, `detector.py` |
+| `cognicore/connectors/` | Hosted MCP servers: the Claude connector and the ChatGPT app | `remote.py`, `oauth.py`, `chatgpt.py` |
+| `cognicore/extension/` | Local Claude Desktop extension (stdio MCP) and Claude Code setup | `server.py`, `code_setup.py` |
+| `cognicore/mcp/` | Local MCP server for the full runtime (`cognicore mcp serve`) | `server.py` |
+| `cognicore/server/` | REST API (`cognicore serve`) | `app.py` |
+| `cognicore/fabric/` | Cognitive Fabric adapters for third-party tools | `plugins/figma.py`, `plugins/elevenlabs.py` |
+| `cognicore/integrations/` | Framework bridges: LangChain, CrewAI, mem0, OpenAI Agents, Hugging Face | `langchain.py`, `crewai.py`, `mem0/` |
+| `cognicore/nexus/` | NEXUS autonomous coding agent | `agent.py`, `run.py` |
+| `cognicore/nexus/triggers/` | What starts NEXUS: task queue, GitHub issues, CI, Slack, Linear, schedules | `task_queue.py`, `webhook_server.py` |
+| `cognicore/benchmarks/` | Regression benchmark suite used by `make bench` and CI | `suite.py`, `regression.py` |
+| `cognicore/ui/` | Dashboard, memory studio, web UI server | `dashboard.py`, `studio.py`, `server.py` |
+| `cognicore/experimental/` | Dream, Oracle, TimeTravel, Civilization, Conscience, DNA (APIs may change) | |
+| `cognicore/utils/` | Caching, rate limiting, SQLite helpers | `cache.py`, `rate_limiter.py` |
+
+Other packages: `adapters/`, `commerce/`, `decision/`, `gym/`, `llm/`, `logging/`, `passport/`, `realbench/`, `reflection/`, `rendering/`, `research/`, `rl/`.
+
+**Old import paths still work.** Modules that moved in the restructure (for
+example `cognicore.advanced_memory`, now `cognicore.memory.semantic`) are aliased
+in [`cognicore/_compat.py`](cognicore/_compat.py), which lists every move. Use the new paths in new code.
+
+### The rest of the repository
+
+| Path | What it is |
+|---|---|
+| `tests/` | The test suite (`make test`) |
+| `benchmarks/` | Benchmark harnesses: LongMemEval (`longmemeval/`, `data/`, `common/`), agent-learning experiments (`agent_learning/`), and standalone scripts |
+| `examples/` | Runnable examples and demos (`walkthrough/`, `standalone/`, `experience_transfer/`, `launch/`) |
+| `plugins/` | Claude client packages: the Claude Code plugins and the Desktop extension (see `plugins/README.md`) |
+| `docs/` | Documentation; `docs/internal/` holds audits, plans and the progress log |
+| `scripts/` | Developer scripts: `checks/` (verification), `analysis/`, `probes/`, `dev/` |
+| `content_studio/` | Content Studio app |
+| `env/`, `server/`, `openenv.yaml`, `inference.py`, `dashboard.html` | The OpenEnv AI Safety Monitor environment. These stay at the root because the OpenEnv format expects them there. |
+| `api/`, `public/` | Vercel deployment (serverless function and static page) |
+| `Dockerfile`, `railway.toml`, `render.yaml`, `fly.toml`, `Procfile` | Deployment configs for the hosted connectors |
+
+Generated output (`results/`, `benchmark_output/`, `experiments/`, `cognicore_data/`) is git-ignored.
+
+### Moving files safely
+
+`scripts/checks/restructure_guard.py` snapshots how the code behaves (every
+test result, every module import, every first-party import statement, the
+public API, the CLI and each deployable app's `/health`) and compares two
+snapshots:
+
+```bash
+python scripts/checks/restructure_guard.py snapshot before.json
+# ... move files, add the old path to cognicore/_compat.py ...
+python scripts/checks/restructure_guard.py snapshot after.json
+python scripts/checks/restructure_guard.py compare before.json after.json
+```
 
 ---
 

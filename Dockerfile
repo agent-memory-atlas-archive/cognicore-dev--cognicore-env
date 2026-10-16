@@ -24,4 +24,4 @@ RUN mkdir -p /data/cognicore
 EXPOSE 8000
 
 # MCP requires stdout for stdio transport, but we use SSE so standard uvicorn logging is fine
-CMD ["uvicorn", "cognicore.integrations.chatgpt:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "cognicore.connectors.chatgpt:app", "--host", "0.0.0.0", "--port", "8000"]

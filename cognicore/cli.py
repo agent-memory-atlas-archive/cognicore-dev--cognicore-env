@@ -127,13 +127,13 @@ def cmd_ui(args):
 def cmd_integrations(args):
     action = getattr(args, 'action', 'status')
     if action == 'setup':
-        from cognicore.integrations.setup_wizard import setup_wizard
+        from cognicore.nexus.triggers.setup_wizard import setup_wizard
         setup_wizard()
     elif action == 'test':
-        from cognicore.integrations.setup_wizard import test_connections
+        from cognicore.nexus.triggers.setup_wizard import test_connections
         test_connections()
     elif action == 'status':
-        from cognicore.integrations.task_queue import NexusTaskQueue
+        from cognicore.nexus.triggers.task_queue import NexusTaskQueue
         q = NexusTaskQueue()
         s = q.stats()
         print("\n  NEXUS Integration Status")
@@ -354,7 +354,7 @@ def cmd_passport(args):
 
 def cmd_civilization(args):
     """Run a Civilization Server."""
-    from cognicore.civilization import CivilizationServer
+    from cognicore.experimental.civilization import CivilizationServer
     import time
     
     if args.action == "serve":
@@ -375,7 +375,7 @@ def cmd_civilization(args):
 
 def cmd_studio(args):
     """Start the CogniCore Memory Observability Studio."""
-    from cognicore.studio import run_studio
+    from cognicore.ui.studio import run_studio
     port = getattr(args, 'port', 8060)
     run_studio(port=port)
 

@@ -24,7 +24,7 @@ import os
 from typing import Any, Dict, List, Optional, Set
 
 from cognicore.memory.base import MemoryEntry, MemoryState
-from cognicore.memory_manager import MemoryManager
+from cognicore.memory.manager import MemoryManager
 from cognicore.integrations.mem0.bundle import SyncReceipt
 
 logger = logging.getLogger("cognicore.integrations.mem0.sync")

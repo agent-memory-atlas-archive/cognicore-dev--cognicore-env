@@ -54,7 +54,7 @@ pip install cognicore-env
 
 ```python
 import cognicore as cc
-from cognicore.smart_agents import AutoLearner
+from cognicore.agents.smart import AutoLearner
 
 # Enable memory and reflection — that's the only change
 config = cc.CogniCoreConfig(enable_memory=True, enable_reflection=True)

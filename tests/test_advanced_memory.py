@@ -1,6 +1,6 @@
-"""Tests for cognicore.advanced_memory — SemanticMemory."""
+"""Tests for cognicore.memory.semantic — SemanticMemory."""
 
-from cognicore.advanced_memory import SemanticMemory
+from cognicore.memory.semantic import SemanticMemory
 
 
 class TestSemanticMemoryStore:

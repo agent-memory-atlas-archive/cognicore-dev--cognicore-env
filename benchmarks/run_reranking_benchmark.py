@@ -8,14 +8,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
 
-from cognicore_benchmarks.common.llm_client import LLMClient
+from benchmarks.common.llm_client import LLMClient
 from cognicore.memory.embedding_backend import BasicEmbeddingBackend
 from cognicore.memory.providers.sentence_transformers import SentenceTransformerProvider
 from cognicore.memory.providers.reranker import SentenceTransformerReranker
 from cognicore.memory.base import MemoryEntry
 
 def load_oracle():
-    with open('cognicore_benchmarks/data/longmemeval/longmemeval_oracle.json') as f:
+    with open('benchmarks/data/longmemeval/longmemeval_oracle.json') as f:
         return json.load(f)[:50]
 
 def evaluate_system(use_reranker=False):

@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from cognicore.integrations.chatgpt import app
+from cognicore.connectors.chatgpt import app
 
 client = TestClient(app)
 
@@ -29,7 +29,7 @@ def test_record_experience_attempts_accepts_null():
     """attempts advertises "default": null, so its schema must allow null."""
     import asyncio
 
-    from cognicore.integrations.chatgpt import mcp
+    from cognicore.connectors.chatgpt import mcp
 
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
     schema = tools["cognicore_record_experience"].inputSchema["properties"]["attempts"]

@@ -1,10 +1,10 @@
 # Remote MCP server (Claude connector)
 
-`cognicore/extension/remote.py` is the hosted MCP server behind the CogniCore Claude connector and the `cognicore-memory` plugin. Users sign in with GitHub, and each GitHub account gets its own memory database.
+`cognicore/connectors/remote.py` is the hosted MCP server behind the CogniCore Claude connector and the `cognicore-memory` plugin. Users sign in with GitHub, and each GitHub account gets its own memory database.
 
 ## How sign-in works
 
-The server is its own OAuth 2.1 authorization server (`cognicore/extension/oauth.py`) and hands the actual sign-in to GitHub:
+The server is its own OAuth 2.1 authorization server (`cognicore/connectors/oauth.py`) and hands the actual sign-in to GitHub:
 
 1. Claude calls the MCP URL without a token and gets `401` with a `WWW-Authenticate` header pointing at `/.well-known/oauth-protected-resource/...`.
 2. Claude reads the metadata, registers itself at `/register`, and opens `/authorize` with PKCE.
@@ -45,7 +45,7 @@ The callback URL must use the same origin as `COGNICORE_PUBLIC_URL`.
 
 ## Deploying on Railway
 
-`railway.toml` builds the Dockerfile and starts `cognicore.extension.remote:app`.
+`railway.toml` builds the Dockerfile and starts `cognicore.connectors.remote:app`.
 
 1. Set the environment variables above on the service.
 2. Add a volume mounted at `/data`, or memories are lost on every deploy.
@@ -65,7 +65,7 @@ The callback URL must use the same origin as `COGNICORE_PUBLIC_URL`.
 ```bash
 COGNICORE_JWT_SECRET=dev-secret GITHUB_CLIENT_ID=... GITHUB_CLIENT_SECRET=... \
 COGNICORE_PUBLIC_URL=http://localhost:8000 \
-uvicorn cognicore.extension.remote:app --port 8000
+uvicorn cognicore.connectors.remote:app --port 8000
 ```
 
 A local GitHub OAuth App needs the callback `http://localhost:8000/oauth/github/callback`.

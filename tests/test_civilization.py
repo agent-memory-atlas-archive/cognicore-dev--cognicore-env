@@ -3,7 +3,7 @@ import json
 import time
 import urllib.request
 import threading
-from cognicore.civilization import Civilization, CivilizationServer, InsightReport
+from cognicore.experimental.civilization import Civilization, CivilizationServer, InsightReport
 
 class DummyEvent:
     def __init__(self, action, reward):

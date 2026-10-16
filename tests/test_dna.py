@@ -1,6 +1,6 @@
 import unittest
 import copy
-from cognicore.dna import AgentDNA, Population
+from cognicore.experimental.dna import AgentDNA, Population
 
 class DummyEvent:
     def __init__(self, action, reward):

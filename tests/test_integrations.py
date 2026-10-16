@@ -24,7 +24,7 @@ def test_task_queue():
     print("\n" + "="*60)
     print("  1. TASK QUEUE")
     print("="*60)
-    from cognicore.integrations.task_queue import NexusTaskQueue, NexusTask, TaskSource, TaskPriority
+    from cognicore.nexus.triggers.task_queue import NexusTaskQueue, NexusTask, TaskSource, TaskPriority
 
     q = NexusTaskQueue(db_path=":memory:")
 
@@ -111,7 +111,7 @@ def test_github_issues():
     print("\n" + "="*60)
     print("  2. GITHUB ISSUES")
     print("="*60)
-    from cognicore.integrations.github_issues import GitHubIssuesTrigger
+    from cognicore.nexus.triggers.github_issues import GitHubIssuesTrigger
 
     gh = GitHubIssuesTrigger({"token": "", "label_trigger": "nexus"})
 
@@ -149,7 +149,7 @@ def test_ci_fixer():
     print("\n" + "="*60)
     print("  3. CI FIXER")
     print("="*60)
-    from cognicore.integrations.ci_fixer import CIFailureFixer
+    from cognicore.nexus.triggers.ci_fixer import CIFailureFixer
 
     fixer = CIFailureFixer({"max_attempts": 3, "auto_commit": True})
 
@@ -189,7 +189,7 @@ def test_slack():
     print("\n" + "="*60)
     print("  4. SLACK INTEGRATION")
     print("="*60)
-    from cognicore.integrations.slack import SlackIntegration
+    from cognicore.nexus.triggers.slack import SlackIntegration
 
     slack = SlackIntegration({"bot_token": "", "update_interval": 5})
 
@@ -226,7 +226,7 @@ def test_linear():
     print("\n" + "="*60)
     print("  5. LINEAR INTEGRATION")
     print("="*60)
-    from cognicore.integrations.linear import LinearIntegration
+    from cognicore.nexus.triggers.linear import LinearIntegration
 
     linear = LinearIntegration({"api_key": "", "trigger_label": "nexus"})
 
@@ -257,8 +257,8 @@ def test_scheduler():
     print("\n" + "="*60)
     print("  6. SCHEDULER")
     print("="*60)
-    from cognicore.integrations.scheduler import NexusScheduler
-    from cognicore.integrations.task_queue import NexusTaskQueue
+    from cognicore.nexus.triggers.scheduler import NexusScheduler
+    from cognicore.nexus.triggers.task_queue import NexusTaskQueue
 
     q = NexusTaskQueue(db_path=":memory:")
     sched = NexusScheduler(config={}, queue=q)
@@ -295,7 +295,7 @@ def test_pr_reviewer():
     print("\n" + "="*60)
     print("  7. PR AUTO-REVIEWER")
     print("="*60)
-    from cognicore.integrations.pr_reviewer import PRReviewer
+    from cognicore.nexus.triggers.pr_reviewer import PRReviewer
 
     reviewer = PRReviewer({"min_confidence": 0.5})
 
@@ -337,8 +337,8 @@ def test_webhook_server():
     print("\n" + "="*60)
     print("  8. WEBHOOK SERVER (routes)")
     print("="*60)
-    from cognicore.integrations.webhook_server import router, init
-    from cognicore.integrations.task_queue import NexusTaskQueue
+    from cognicore.nexus.triggers.webhook_server import router, init
+    from cognicore.nexus.triggers.task_queue import NexusTaskQueue
 
     q = NexusTaskQueue(db_path=":memory:")
     config = {"github": {"label_trigger": "nexus"}, "ci": {"max_attempts": 3},
@@ -356,8 +356,8 @@ def test_end_to_end():
     print("\n" + "="*60)
     print("  9. END-TO-END FLOW")
     print("="*60)
-    from cognicore.integrations.task_queue import NexusTaskQueue, NexusTask
-    from cognicore.integrations.github_issues import GitHubIssuesTrigger
+    from cognicore.nexus.triggers.task_queue import NexusTaskQueue, NexusTask
+    from cognicore.nexus.triggers.github_issues import GitHubIssuesTrigger
 
     q = NexusTaskQueue(db_path=":memory:")
     gh = GitHubIssuesTrigger({"label_trigger": "nexus"})

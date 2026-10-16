@@ -41,7 +41,7 @@
 
 ```bash
 pip install cognicore-env
-python demos/standalone/demo.py
+python examples/standalone/demo.py
 ```
 
 [SCREEN]: Demo output scrolls — show the key result lines:

@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
 
-from cognicore_benchmarks.common.llm_client import LLMClient
+from benchmarks.common.llm_client import LLMClient
 
 client = LLMClient(model_name="gemini-2.5-flash")
 res = client.generate("Is the sky blue?", system_prompt=None)

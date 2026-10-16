@@ -1,11 +1,11 @@
 """Tests for Phase 8 — Roadmap features."""
 
-from cognicore.meta_rewards import MetaRewardOptimizer
-from cognicore.causal import CausalEngine
-from cognicore.agent_builder import build_agent, describe_agent
-from cognicore.strategy import StrategySwitcher
-from cognicore.lifelong import LifelongAgent
-from cognicore.swarm import Swarm
+from cognicore.training.meta_rewards import MetaRewardOptimizer
+from cognicore.observability.causal import CausalEngine
+from cognicore.agents.builder import build_agent, describe_agent
+from cognicore.agents.strategy import StrategySwitcher
+from cognicore.agents.lifelong import LifelongAgent
+from cognicore.agents.swarm import Swarm
 
 
 class TestMetaRewardOptimizer:
