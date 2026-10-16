@@ -4,28 +4,11 @@
   "title": "CogniCore",
   "description": "Memory, reflection and safety for AI agents. Hosted or local, no vector database.",
   "version": "0.10.3",
-  "website_url": "https://www.cognicoree.tech",
+  "websiteUrl": "https://www.cognicoree.tech",
   "repository": {
     "url": "https://github.com/cognicore-dev/cognicore-env",
     "source": "github"
   },
-  "packages": [
-    {
-      "registry_type": "pypi",
-      "identifier": "cognicore-env",
-      "version": "0.10.3",
-      "runtime_hint": "uvx",
-      "transport": {
-        "type": "stdio"
-      },
-      "runtime_arguments": [
-        {
-          "type": "positional",
-          "value": "cognicore-extension"
-        }
-      ]
-    }
-  ],
   "remotes": [
     {
       "type": "streamable-http",
