@@ -32,6 +32,7 @@ No user database or Supabase project is involved.
 | `COGNICORE_PUBLIC_URL` | Yes | Public origin, e.g. `https://mcp.cognicoree.tech`. Must match the GitHub callback URL's origin. |
 | `COGNICORE_DATA_DIR` | Set by the Dockerfile | `/data/cognicore`. Memories go to `$COGNICORE_DATA_DIR/remote`, so mount a persistent volume at `/data`. |
 | `COGNICORE_USE_SEMANTIC` | No | `0` to skip loading sentence-transformers. |
+| `COGNICORE_EXTRA_REDIRECT_URIS` | No | Comma-separated extra OAuth redirect URIs accepted at `/register`, on top of Claude's callbacks and RFC 8252 loopback. Add one per MCP client that needs to register dynamically — e.g. `https://connect.smithery.ai/oauth/callback` for Smithery. |
 
 ## GitHub OAuth App
 
