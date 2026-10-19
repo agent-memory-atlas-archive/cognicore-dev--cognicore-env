@@ -24,6 +24,7 @@ import hashlib
 import html
 import json
 import os
+import re
 import secrets
 import time
 import urllib.parse
@@ -51,6 +52,10 @@ CLAUDE_REDIRECT_URIS = {
     "https://claude.com/api/mcp/auth_callback",
 }
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+# ChatGPT gives every connector its own callback, https://chatgpt.com/connector/oauth/<id>,
+# plus a legacy shared one. chatgpt.com is controlled by OpenAI, so any id is accepted.
+CHATGPT_REDIRECT = re.compile(r"^https://chatgpt\.com/connector/oauth/[A-Za-z0-9_-]{1,128}$")
+CHATGPT_LEGACY_REDIRECT = "https://chatgpt.com/connector_platform_oauth_redirect"
 
 # MCP endpoints a user can enter as the connector URL. Protected-resource
 # metadata must name the exact URL the user entered.
@@ -112,6 +117,8 @@ def redirect_uri_allowed(uri: str) -> bool:
         return False
     extra = {u.strip() for u in os.environ.get("COGNICORE_EXTRA_REDIRECT_URIS", "").split(",") if u.strip()}
     if uri in CLAUDE_REDIRECT_URIS or uri in extra:
+        return True
+    if uri == CHATGPT_LEGACY_REDIRECT or CHATGPT_REDIRECT.match(uri):
         return True
     parsed = urllib.parse.urlparse(uri)
     # RFC 8252 loopback redirect: any port, matched for localhost and 127.0.0.1.
@@ -255,6 +262,8 @@ def _client_label(redirect_uri: str) -> tuple[str, str]:
         return "Claude Code", target.netloc
     if redirect_uri in CLAUDE_REDIRECT_URIS:
         return "Claude", target.netloc
+    if redirect_uri == CHATGPT_LEGACY_REDIRECT or CHATGPT_REDIRECT.match(redirect_uri):
+        return "ChatGPT", target.netloc
     return target.hostname or "An application", target.netloc
 
 

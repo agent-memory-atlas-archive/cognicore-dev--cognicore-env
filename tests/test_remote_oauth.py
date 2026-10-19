@@ -198,3 +198,34 @@ def test_consent_page_cancel_and_security_headers(github):
     assert query["error"] == "access_denied" and query["state"] == "st8"
     assert "frame-ancestors 'none'" in page.headers["content-security-policy"]
     assert page.headers["x-frame-options"] == "DENY"
+
+
+@pytest.mark.parametrize("uri", [
+    "https://chatgpt.com/connector/oauth/abc123XYZ_-",
+    "https://chatgpt.com/connector_platform_oauth_redirect",
+])
+def test_chatgpt_connector_callbacks_are_accepted(github, uri):
+    assert oauth.redirect_uri_allowed(uri)
+    assert TestClient(remote.app).post("/register", json={"redirect_uris": [uri]}).status_code == 201
+
+
+@pytest.mark.parametrize("uri", [
+    "https://chatgpt.com.evil.example/connector/oauth/abc",
+    "https://evil.example/connector/oauth/abc",
+    "http://chatgpt.com/connector/oauth/abc",
+    "https://chatgpt.com/connector/oauth/",
+    "https://chatgpt.com/connector/oauth/abc/../../evil",
+    "https://chatgpt.com/connector/oauth/abc?next=https://evil.example",
+    "https://chatgpt.com/other/path",
+])
+def test_chatgpt_lookalikes_are_refused(uri):
+    assert not oauth.redirect_uri_allowed(uri)
+
+
+def test_consent_page_names_chatgpt(github):
+    _, challenge = _pkce()
+    page = TestClient(remote.app).get("/authorize", params={
+        "response_type": "code", "client_id": "c", "redirect_uri": "https://chatgpt.com/connector/oauth/abc123",
+        "code_challenge": challenge, "code_challenge_method": "S256", "state": "s",
+    })
+    assert "Connect ChatGPT to CogniCore Memory" in page.text
