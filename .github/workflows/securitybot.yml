@@ -45,6 +45,7 @@ jobs:
 
           VULN_PATTERNS = {
               "hardcoded_secret": {
+                  "scope": "raw",
                   "patterns": [
                       r'(?:api[_-]?key|secret|password|token|auth)\s*=\s*["\'][^"\']{8,}["\']',
                       r'sk-[a-zA-Z0-9]{20,}',
@@ -57,6 +58,7 @@ jobs:
                   "fix": "Use environment variables: `os.environ.get('KEY_NAME')`",
               },
               "sql_injection": {
+                  "scope": "line",
                   "patterns": [
                       r'execute\s*\(\s*f["\']',
                       r'execute\s*\(\s*["\'].*%s',
@@ -66,17 +68,18 @@ jobs:
                   "fix": "Use parameterized queries: `cursor.execute('SELECT * WHERE id=?', (id,))`",
               },
               "unsafe_deserialization": {
+                  "scope": "code",
                   "patterns": [
                       r'pickle\.loads?\(',
-                      r'yaml\.load\s*\([^)]*\)\s*$',
-                      r'yaml\.load\s*\([^)]*(?!Loader)',
-                      r'eval\s*\(',
-                      r'exec\s*\(',
+                      r'yaml\.load\s*\((?![^)]*Loader)',
+                      r'(?<![\w.])eval\s*\(',
+                      r'(?<![\w.])exec\s*\(',
                   ],
                   "severity": "HIGH",
                   "fix": "Use `json.loads()` or `yaml.safe_load()` instead",
               },
               "command_injection": {
+                  "scope": "code",
                   "patterns": [
                       r'os\.system\s*\(',
                       r'subprocess\.\w+\([^)]*shell\s*=\s*True',
@@ -86,13 +89,15 @@ jobs:
                   "fix": "Use `subprocess.run()` with `shell=False` and a list of args",
               },
               "insecure_http": {
+                  "scope": "line",
                   "patterns": [
-                      r'http://(?!localhost|127\.0\.0\.1|0\.0\.0\.0)',
+                      r'http://(?!localhost|127\.0\.0\.1|0\.0\.0\.0|www\.w3\.org)[a-z0-9]',
                   ],
                   "severity": "MEDIUM",
                   "fix": "Use HTTPS instead of HTTP",
               },
               "debug_left_on": {
+                  "scope": "code",
                   "patterns": [
                       r'debug\s*=\s*True',
                       r'DEBUG\s*=\s*True',
@@ -102,6 +107,42 @@ jobs:
                   "fix": "Remove debug mode for production code",
               },
           }
+
+          import ast, io, tokenize
+
+          def docstring_lines(src):
+              """Line numbers inside module/class/function docstrings."""
+              out = set()
+              try:
+                  tree = ast.parse(src)
+              except SyntaxError:
+                  return out
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and node.body:
+                      first = node.body[0]
+                      if isinstance(first, ast.Expr) and isinstance(getattr(first, "value", None), ast.Constant) and isinstance(first.value.value, str):
+                          out.update(range(first.lineno, first.end_lineno + 1))
+              return out
+
+          def code_only(src, lines):
+              """Each line with string literals and comments blanked out."""
+              chars = [list(l) for l in lines]
+              blank = {tokenize.STRING, tokenize.COMMENT} | {getattr(tokenize, n) for n in ("FSTRING_MIDDLE",) if hasattr(tokenize, n)}
+              try:
+                  for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+                      if tok.type not in blank:
+                          continue
+                      (sr, sc), (er, ec) = tok.start, tok.end
+                      for r in range(sr, er + 1):
+                          row = chars[r - 1]
+                          a = sc if r == sr else 0
+                          b = ec if r == er else len(row)
+                          for c in range(a, min(b, len(row))):
+                              if row[c] != "\n":
+                                  row[c] = " "
+              except (tokenize.TokenError, IndentationError, SyntaxError):
+                  return lines
+              return ["".join(r) for r in chars]
 
           findings = []
           scanned = 0
@@ -115,26 +156,29 @@ jobs:
                   scanned += 1
 
                   with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                      lines = f.readlines()
+                      src = f.read()
+                  lines = src.splitlines(keepends=True)
+                  docs = docstring_lines(src)
+                  code = code_only(src, lines)
 
                   for i, line in enumerate(lines, 1):
                       stripped = line.strip()
                       if stripped.startswith("#") or "nosec" in line:
                           continue
                       for vuln_type, config in VULN_PATTERNS.items():
-                          for pattern in config["patterns"]:
-                              if re.search(pattern, line, re.IGNORECASE):
-                                  # Skip test files and comments and docstrings
-                                  if '"""' in line or "'''" in line:
-                                      continue
-                                  findings.append({
-                                      "file": path,
-                                      "line": i,
-                                      "type": vuln_type,
-                                      "severity": config["severity"],
-                                      "fix": config["fix"],
-                                      "code": stripped[:100],
-                                  })
+                          scope = config.get("scope", "line")
+                          if scope != "raw" and i in docs:
+                              continue
+                          text = code[i - 1] if scope == "code" else line
+                          if any(re.search(p, text, re.IGNORECASE) for p in config["patterns"]):
+                              findings.append({
+                                  "file": path,
+                                  "line": i,
+                                  "type": vuln_type,
+                                  "severity": config["severity"],
+                                  "fix": config["fix"],
+                                  "code": stripped[:100],
+                              })
 
           # Build report
           report = []
