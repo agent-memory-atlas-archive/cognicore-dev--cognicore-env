@@ -52,6 +52,31 @@ else:
     mcp = FastMCP("cognicore-remote")
 security = HTTPBearer()
 
+# ── Tool annotations ──────────────────────────────────────────────────────
+# Every tool declares a human title and behaviour hints (MCP ToolAnnotations).
+# Clients use them to decide when to ask the user before a call, and the
+# Claude connector directory requires them. Keep them accurate: a tool that
+# writes must not be marked read-only.
+import inspect as _inspect
+
+try:
+    from mcp.types import ToolAnnotations as _ToolAnnotations
+except ImportError:  # very old mcp releases
+    _ToolAnnotations = None
+
+_READ = dict(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
+_WRITE = dict(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
+_DELETE = dict(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False)
+_EXTERNAL_WRITE = dict(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+_TOOL_ACCEPTS_ANNOTATIONS = {"title", "annotations"} <= set(_inspect.signature(mcp.tool).parameters)
+
+
+def _tool(title: str, hints: dict, **extra):
+    """``@mcp.tool()`` with a title and annotations, on any supported mcp version."""
+    if not _TOOL_ACCEPTS_ANNOTATIONS or _ToolAnnotations is None:
+        return mcp.tool()
+    return mcp.tool(title=title, annotations=_ToolAnnotations(title=title, **hints, **extra))
+
 
 
 
@@ -335,7 +360,7 @@ def _normalize_score(score: float, max_score: float) -> float:
     return round(min(score / max_score, 1.0), 3)
 
 
-@mcp.tool()
+@_tool("Remember a fact", _WRITE)
 def cognicore_remember(text: str, ctx: Context, category: str = "", scope: str = "user", conversation: Optional[list] = None) -> str:
     """Store a fact, preference, or decision. Auto-decomposes and auto-categorizes."""
     backend = get_backend(ctx)
@@ -372,7 +397,7 @@ def cognicore_remember(text: str, ctx: Context, category: str = "", scope: str =
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Search memory", _READ)
 def cognicore_recall(query: str, ctx: Context, category: str = "", scope: str = "user", top_k: int = 5, conversation: Optional[list] = None) -> str:
     """Search memory. Returns scored results sorted by relevance."""
     backend = get_backend(ctx)
@@ -402,7 +427,7 @@ def cognicore_recall(query: str, ctx: Context, category: str = "", scope: str = 
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Delete a memory", _DELETE)
 def cognicore_forget(entry_id: Any, ctx: Context, conversation: Optional[list] = None) -> str:
     """Delete a memory by ID."""
     backend = get_backend(ctx)
@@ -411,7 +436,7 @@ def cognicore_forget(entry_id: Any, ctx: Context, conversation: Optional[list] =
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("List memories", _READ)
 def cognicore_list(ctx: Context, limit: int = 10, category: str = "", scope: str = "user", conversation: Optional[list] = None) -> str:
     """List recent memories with categories."""
     backend = get_backend(ctx)
@@ -435,7 +460,7 @@ def cognicore_list(ctx: Context, limit: int = 10, category: str = "", scope: str
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Memory statistics", _READ)
 def cognicore_stats(ctx: Context, conversation: Optional[list] = None) -> str:
     """Memory statistics: count, categories, uptime, storage."""
     backend = get_backend(ctx)
@@ -468,14 +493,14 @@ def cognicore_stats(ctx: Context, conversation: Optional[list] = None) -> str:
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Compress conversation context", _WRITE)
 def cognicore_compress_context(ctx: Context, conversation: list, keep_last_n: int = 5) -> str:
     """Called when conversation is getting long. Takes messages older than last N and compresses them into a dense summary without LLM API calls."""
     backend = get_backend(ctx)
     return compress_context(backend, conversation, keep_last_n=keep_last_n)
 
 
-@mcp.tool()
+@_tool("Save session summary", _WRITE)
 def cognicore_save_session(ctx: Context, conversation: list, session_name: str = "") -> str:
     """Called at END of conversation automatically. Saves atomic facts, decisions, code snippets, and action items before context is lost."""
     backend = get_backend(ctx)
@@ -483,7 +508,7 @@ def cognicore_save_session(ctx: Context, conversation: list, session_name: str =
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Resume from past sessions", _READ)
 def cognicore_resume_session(ctx: Context, query: str = "", last_n_sessions: int = 3, include_action_items: bool = True, conversation: Optional[list] = None) -> str:
     """Called at START of every new conversation. Reconstructs context brief from past sessions instantly."""
     backend = get_backend(ctx)
@@ -495,7 +520,7 @@ def cognicore_resume_session(ctx: Context, query: str = "", last_n_sessions: int
 # MEMORY COMMERCE TOOLS — Agent Knowledge Marketplace
 # ═══════════════════════════════════════════════════════════
 
-@mcp.tool()
+@_tool("List my memories for sale", _WRITE, idempotentHint=True)
 def cognicore_list_for_sale(ctx: Context, category: str = "", memory_type: str = "all", min_confidence: float = 0.7, top_k: int = 20, conversation: Optional[list] = None) -> str:
     """Lists memories available for purchase from this agent. Filter by category, memory_type (episodic/semantic/procedural/all), and min_confidence."""
     backend = get_backend(ctx)
@@ -521,7 +546,7 @@ def cognicore_list_for_sale(ctx: Context, category: str = "", memory_type: str =
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Buy memories from another agent", _WRITE)
 def cognicore_purchase_memory(ctx: Context, seller_agent_id: str, memory_type: str = "all", category_filter: str = "", max_price_usd: float = 10.0, conversation: Optional[list] = None) -> str:
     """Purchases memories from another agent. Transfers knowledge to your memory store. Specify seller_agent_id, optional memory_type filter, category_filter, and max_price_usd budget."""
     buyer_backend = get_backend(ctx)
@@ -566,7 +591,7 @@ def cognicore_purchase_memory(ctx: Context, seller_agent_id: str, memory_type: s
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Estimate memory value", _WRITE, idempotentHint=True)
 def cognicore_value_my_memory(ctx: Context, category: str = "", conversation: Optional[list] = None) -> str:
     """Estimates how much your accumulated memories are worth in the marketplace. Breaks down value by memory type (episodic, semantic, procedural)."""
     backend = get_backend(ctx)
@@ -588,7 +613,7 @@ def cognicore_value_my_memory(ctx: Context, category: str = "", conversation: Op
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Agent reputation", _WRITE, idempotentHint=True)
 def cognicore_reputation(ctx: Context, agent_id: str = "", conversation: Optional[list] = None) -> str:
     """Gets reputation score and breakdown for an agent. Built on transaction history — cannot be faked. Leave agent_id empty to check your own reputation."""
     if not agent_id:
@@ -617,7 +642,7 @@ def cognicore_reputation(ctx: Context, agent_id: str = "", conversation: Optiona
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Find memory sellers", _READ)
 def cognicore_discover_sellers(ctx: Context, query: str = "", category: str = "", min_reputation: float = 0.7, max_price_usd: float = 100.0, memory_type: str = "all", conversation: Optional[list] = None) -> str:
     """Finds agents selling memories relevant to your query. This is the marketplace discovery layer. Search by query, category, min_reputation, and budget."""
     registry = _get_registry()
@@ -657,7 +682,7 @@ def cognicore_discover_sellers(ctx: Context, query: str = "", category: str = ""
 # --- Cognitive Fabric ---
 from cognicore.fabric.registry import get_fabric, register_all_plugins
 
-@mcp.tool()
+@_tool("Cognitive Fabric recommendations", _WRITE)
 def cognicore_fabric_recommend(
     ctx: Context,
     tool_name: str,
@@ -686,7 +711,7 @@ def cognicore_fabric_recommend(
     res = json.dumps(result, indent=2)
     return apply_auto_compression(ctx, conversation, res)
 
-@mcp.tool()
+@_tool("Sync Figma into Cognitive Fabric", _EXTERNAL_WRITE)
 def cognicore_fabric_sync_figma(
     ctx: Context,
     file_key: str,
@@ -710,7 +735,7 @@ def cognicore_fabric_sync_figma(
 # --- ElevenLabs Integration ---
 from cognicore.fabric.plugins.elevenlabs import ElevenLabsIntegration
 
-@mcp.tool()
+@_tool("Save ElevenLabs preferences", _WRITE, idempotentHint=True)
 def cognicore_elevenlabs_sync(
     ctx: Context,
     voice_id: str,
@@ -769,7 +794,7 @@ def cognicore_elevenlabs_sync(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Get ElevenLabs preferences", _READ)
 def cognicore_elevenlabs_recall(
     ctx: Context,
     include_usage: bool = True,
@@ -800,7 +825,7 @@ def cognicore_elevenlabs_recall(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Record an ElevenLabs generation", _WRITE)
 def cognicore_elevenlabs_learn(
     ctx: Context,
     voice_id: str,
@@ -836,7 +861,7 @@ def cognicore_elevenlabs_learn(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Rate an ElevenLabs generation", _WRITE)
 def cognicore_elevenlabs_feedback(
     ctx: Context,
     generation_id: str,
@@ -863,7 +888,7 @@ def cognicore_elevenlabs_feedback(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Recommend ElevenLabs voice and settings", _READ)
 def cognicore_elevenlabs_recommend(
     ctx: Context,
     content_type: str = "",
@@ -921,7 +946,7 @@ def _get_experience_manager(ctx: Context) -> Any:
     return ExperienceManager(backend)
 
 
-@mcp.tool()
+@_tool("Record an experience", _WRITE)
 def cognicore_record_experience(
     task: str,
     problem: str,
@@ -1024,7 +1049,7 @@ def cognicore_record_experience(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Verify an experience", _WRITE)
 def cognicore_verify_experience(
     experience_id: str,
     ctx: Optional[Context] = None,
@@ -1072,7 +1097,7 @@ def cognicore_verify_experience(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Recall past experiences", _READ)
 def cognicore_recall_experience(
     query: str,
     ctx: Optional[Context] = None,
@@ -1172,7 +1197,7 @@ def cognicore_recall_experience(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Share experiences", _WRITE)
 def cognicore_share_experience(
     query: str,
     target_agent_id: str,
@@ -1224,7 +1249,7 @@ def cognicore_share_experience(
     return apply_auto_compression(ctx, conversation, res)
 
 
-@mcp.tool()
+@_tool("Check an experience is still valid", _READ)
 def cognicore_check_experience(
     experience_id: str,
     ctx: Optional[Context] = None,
@@ -1542,7 +1567,7 @@ def _get_figma_adapters(ctx: Context):
     return FigmaAdapter(fabric), FigmaExperienceAdapter(fabric)
 
 
-@mcp.tool()
+@_tool("Sync a Figma file", _EXTERNAL_WRITE)
 def cognicore_figma_sync(
     file_key: str,
     ctx: Context,
@@ -1580,7 +1605,7 @@ def cognicore_figma_sync(
     return f"Figma sync failed: {result.get('message', 'unknown error')}"
 
 
-@mcp.tool()
+@_tool("Get Figma design tokens", _READ)
 def cognicore_figma_recall(ctx: Context) -> str:
     """Retrieve all stored Figma design tokens, typography, colors, and variables.
 
@@ -1605,7 +1630,7 @@ def cognicore_figma_recall(ctx: Context) -> str:
     return json.dumps(out, indent=2)
 
 
-@mcp.tool()
+@_tool("Check a Figma component", _READ)
 def cognicore_figma_check_component(
     figma_component: str,
     ctx: Context,
@@ -1648,7 +1673,7 @@ def cognicore_figma_check_component(
     return "\n".join(lines)
 
 
-@mcp.tool()
+@_tool("Record a Figma implementation", _WRITE)
 def cognicore_figma_record_implementation(
     figma_component: str,
     code_file: str,
@@ -1689,7 +1714,7 @@ def cognicore_figma_record_implementation(
     )
 
 
-@mcp.tool()
+@_tool("Get the design system", _READ)
 def cognicore_figma_design_system(ctx: Context) -> str:
     """Get the full accumulated design-system knowledge for this project.
 
@@ -1722,7 +1747,7 @@ def cognicore_figma_design_system(ctx: Context) -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+@_tool("Translate Figma tokens for a tool", _READ)
 def cognicore_figma_recommend(
     target_tool: str,
     ctx: Context,
