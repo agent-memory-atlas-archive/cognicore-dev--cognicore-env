@@ -1,0 +1,15 @@
+# Keeps the actions used by our workflows up to date, so deprecations
+# (e.g. a Node runtime being retired) arrive as a reviewable PR instead of
+# failing builds. All updates come in one grouped PR per month.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+    labels: [dependencies]
