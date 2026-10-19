@@ -275,6 +275,22 @@ def _get_agent_id(ctx: Optional[Context] = None) -> str:
     except Exception:
         return os.environ.get("COGNICORE_AGENT_ID", "claude_code_agent")
 
+def _authenticated_user(ctx: Optional[Context] = None) -> Optional[str]:
+    """The signed-in user's id on the hosted server, or None for local/stdio use.
+
+    On the hosted server every user's memory is private: tools must never read
+    or write another user's database without that user's explicit consent.
+    """
+    if os.environ.get("COGNICORE_DB_PATH"):
+        return None
+    if ctx is None or not getattr(ctx, "request_context", None):
+        return None
+    try:
+        return get_user_id(ctx.request_context)
+    except Exception:
+        return None
+
+
 def apply_auto_compression(ctx: Context, conversation: Optional[list], current_response: str) -> str:
     """Check token count and automatically compress if over 150,000 tokens."""
     if not conversation or not isinstance(conversation, list):
@@ -521,6 +537,10 @@ def cognicore_purchase_memory(ctx: Context, seller_agent_id: str, memory_type: s
     seller_info = registry.get(seller_agent_id)
     if not seller_info:
         return json.dumps({"error": f"Seller '{seller_agent_id}' not found in marketplace registry."})
+    # Agents are auto-registered by read-only tools, so being in the registry is
+    # not consent. Only sellers who listed their memories may be purchased from.
+    if not seller_info.get("for_sale"):
+        return json.dumps({"error": f"Seller '{seller_agent_id}' has not listed memories for sale."})
 
     seller_db_path = get_db_path_for_user(seller_agent_id)
     from cognicore.memory import SQLiteMemoryBackend
@@ -645,7 +665,7 @@ def cognicore_fabric_recommend(
     conversation: Optional[list] = None
 ) -> str:
     """Ask the Cognitive Fabric for semantic rules and recommendations translated for your specific tool."""
-    backend = _get_backend()
+    backend = get_backend(ctx)
     fabric = get_fabric(backend)
     register_all_plugins(fabric)
     
@@ -674,7 +694,7 @@ def cognicore_fabric_sync_figma(
     conversation: Optional[list] = None
 ) -> str:
     """Sync a Figma file into the Cognitive Fabric, allowing it to extract design semantic rules."""
-    backend = _get_backend()
+    backend = get_backend(ctx)
     fabric = get_fabric(backend)
     register_all_plugins(fabric)
     
@@ -1170,6 +1190,15 @@ def cognicore_share_experience(
         target_agent_id: The agent to share experiences with.
         top_k: Max experiences to transfer.
     """
+    caller = _authenticated_user(ctx)
+    if caller is not None and target_agent_id != caller:
+        # On the hosted server this would write into another user's private
+        # memory without their consent (and could plant fake "verified" fixes).
+        return json.dumps({
+            "status": "refused",
+            "error": "On the hosted server, experiences can only be shared within your own account.",
+        })
+
     source_backend = get_backend(ctx)
     target_db_path = get_db_path_for_user(target_agent_id)
     from cognicore.memory import SQLiteMemoryBackend
