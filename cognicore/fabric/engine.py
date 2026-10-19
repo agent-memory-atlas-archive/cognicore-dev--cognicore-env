@@ -2,9 +2,12 @@ import json
 import logging
 import hashlib
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Type
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Type
 
 from cognicore.memory.base import MemoryBackend, MemoryEntry, MemoryScope
+
+if TYPE_CHECKING:
+    from cognicore.fabric.base import CognitiveAdapter
 
 logger = logging.getLogger('cognicore.fabric')
 
@@ -32,7 +35,7 @@ class CognitiveFabric:
     
     def record_observation(self, tool_name: str, action: str, context: Dict[str, Any]) -> str:
         """Stores a raw Layer 1 observation into the shared memory."""
-        obs_id = f"obs_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{hashlib.md5((tool_name+action).encode()).hexdigest()[:6]}"
+        obs_id = f"obs_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{hashlib.md5((tool_name+action).encode(), usedforsecurity=False).hexdigest()[:6]}"
         
         entry = MemoryEntry(
             entry_id=obs_id,
