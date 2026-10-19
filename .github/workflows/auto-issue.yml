@@ -16,9 +16,9 @@ jobs:
     name: Health Scan & Auto-Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -167,7 +167,7 @@ jobs:
 
       - name: 🚨 Issue — Test failures
         if: env.TEST_FAILED == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -201,7 +201,7 @@ jobs:
 
       - name: 🔐 Issue — Security vulnerabilities
         if: env.SECURITY_ISSUES == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -226,7 +226,7 @@ jobs:
 
       - name: ⚠️ Issue — Code quality
         if: env.LINT_ISSUES == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -251,7 +251,7 @@ jobs:
 
       - name: 💀 Issue — Broken imports
         if: env.IMPORT_BROKEN == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -276,7 +276,7 @@ jobs:
 
       - name: 🧹 Issue — Too many TODOs
         if: env.CODE_WARNINGS == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: issues } = await github.rest.issues.listForRepo({
@@ -298,7 +298,7 @@ jobs:
 
       - name: ⚕️ Issue — Doctor failed
         if: env.DOCTOR_FAILED == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -327,7 +327,7 @@ jobs:
 
       - name: ✅ Close resolved issues
         if: github.ref == 'refs/heads/main'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const env = process.env;

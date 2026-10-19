@@ -30,12 +30,12 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issues' && github.event.label.name == 'autofix')
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -176,7 +176,7 @@ jobs:
 
       - name: 🔀 Create PR with fixes
         if: steps.fixer.outputs.total_fixes != '0'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -246,7 +246,7 @@ jobs:
 
       - name: 💬 Update triggering issue (if label-triggered)
         if: github.event_name == 'issues' && steps.fixer.outputs.total_fixes != '0'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
