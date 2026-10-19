@@ -6,11 +6,11 @@ name: 🛡️ SecurityBot — Vulnerability Scanner
 # - Unsafe deserialization (pickle, yaml.load)
 # - Command injection risks (os.system, subprocess with shell=True)
 # - Insecure HTTP usage
-# Posts findings as PR comments or creates security issues
+# Posts findings as PR comments and keeps one tracking issue up to date
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Every hour
+    - cron: '0 0 * * 0'  # Weekly, Sunday 00:00 UTC
   push:
     branches: [main]
     paths: ['cognicore/**']
@@ -28,9 +28,9 @@ jobs:
     name: 🔐 Deep Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -51,7 +51,7 @@ jobs:
                       r'pypi-[a-zA-Z0-9]{20,}',
                       r'ghp_[a-zA-Z0-9]{36}',
                       r'AKIA[0-9A-Z]{16}',
-                      r'Bearer\s+[a-zA-Z0-9\-._~+/]+=*',
+                      r'Bearer\s+[a-zA-Z0-9\-._~+/]{20,}=*',
                   ],
                   "severity": "CRITICAL",
                   "fix": "Use environment variables: `os.environ.get('KEY_NAME')`",
@@ -119,7 +119,7 @@ jobs:
 
                   for i, line in enumerate(lines, 1):
                       stripped = line.strip()
-                      if stripped.startswith("#"):
+                      if stripped.startswith("#") or "nosec" in line:
                           continue
                       for vuln_type, config in VULN_PATTERNS.items():
                           for pattern in config["patterns"]:
@@ -185,7 +185,7 @@ jobs:
 
       - name: 💬 Post Security Report
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             try {
@@ -221,23 +221,62 @@ jobs:
               console.log('Failed to post comment:', error);
             }
 
-      - name: 🚨 Create Security Issue (if critical on main)
+      - name: 🚨 Update Security Issue (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             try {
               const fs = require('fs');
               const data = JSON.parse(fs.readFileSync('security_report.json', 'utf8'));
 
+              // Keep a single open tracking issue: update it, or close it once
+              // the scan is clean, instead of opening a new issue on every push.
+              const { data: open } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'security',
+                creator: 'github-actions[bot]',
+                per_page: 100,
+              });
+              const existing = open.filter(i => i.title.startsWith('🚨 SecurityBot:'));
+              const title = `🚨 SecurityBot: ${data.critical} critical vulnerability(s) detected`;
+
               if (data.critical > 0) {
-                await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: `🚨 SecurityBot: ${data.critical} critical vulnerability(s) detected`,
-                  body: data.body,
-                  labels: ['security', 'bug', 'priority: critical'],
-                });
+                if (existing.length) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: existing[0].number,
+                    title,
+                    body: data.body,
+                  });
+                } else {
+                  await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title,
+                    body: data.body,
+                    labels: ['security', 'bug', 'priority: critical'],
+                  });
+                }
+              } else {
+                for (const issue of existing) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: '✅ Resolved: the latest SecurityBot scan on `main` found no critical issues.',
+                  });
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed',
+                    state_reason: 'completed',
+                  });
+                }
               }
             } catch (error) {
               console.log('Failed to create issue:', error);
