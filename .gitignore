@@ -13,8 +13,9 @@ build/
 .venv/
 venv/
 
-# Editors
-.vscode/
+# Editors (shared MCP config is committed; other editor settings stay local)
+.vscode/*
+!.vscode/mcp.json
 
 # Databases and binary artifacts
 *.db
@@ -39,6 +40,8 @@ cloudflared.exe
 !.claude-plugin/*.json
 !plugins/**/*.json
 !tests/fixtures/**/*.json
+!.vscode/mcp.json
+!.cursor/mcp.json
 
 # Generated output (benchmarks, experiments, local memory stores)
 /results/
