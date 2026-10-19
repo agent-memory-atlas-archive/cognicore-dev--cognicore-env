@@ -18,7 +18,7 @@ def connect_sqlite(path: Union[str, Path], timeout: float = 30.0) -> sqlite3.Con
 
     if db_path != ":memory:":
         busy_timeout_ms = int(timeout * 1000)
-        conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
+        conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")  # nosec B608 - integer from int(), not user input
         
         # Retry WAL mode since it requires an exclusive lock and can bypass the busy_timeout on Windows
         import time
