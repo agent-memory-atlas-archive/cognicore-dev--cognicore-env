@@ -17,9 +17,9 @@ jobs:
     name: 🔬 Deep Codebase Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -188,7 +188,7 @@ jobs:
           PYEOF
 
       - name: 📋 Create or Update Issue
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

@@ -28,9 +28,9 @@ jobs:
     name: 🔐 Deep Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -229,7 +229,7 @@ jobs:
 
       - name: 💬 Post Security Report
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             try {
@@ -267,7 +267,7 @@ jobs:
 
       - name: 🚨 Update Security Issue (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             try {

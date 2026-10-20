@@ -13,13 +13,13 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Generate changelog
         id: changelog
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: commits } = await github.rest.repos.listCommits({
@@ -57,7 +57,7 @@ jobs:
             core.setOutput('body', body);
 
       - name: Create GitHub Release
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           # Passed as an env var, not pasted into the script: commit messages
           # with backticks or ${...} would otherwise break or inject code.
