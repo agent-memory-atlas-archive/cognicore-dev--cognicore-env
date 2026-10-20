@@ -3,7 +3,7 @@
   "name": "io.github.cognicore-dev/cognicore-env",
   "title": "CogniCore",
   "description": "Memory, reflection and safety for AI agents. Hosted or local, no vector database.",
-  "version": "0.10.3",
+  "version": "0.11.0",
   "websiteUrl": "https://www.cognicoree.tech",
   "repository": {
     "url": "https://github.com/cognicore-dev/cognicore-env",

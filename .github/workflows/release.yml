@@ -1,75 +1,120 @@
 name: 🚀 Release
 
+# Push a tag like v0.11.0 to build the package, publish it to PyPI and create
+# the GitHub release. The tag must match the version in pyproject.toml.
 on:
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release:
-    name: Create Release
+  build:
+    name: Build package
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Generate changelog
-        id: changelog
-        uses: actions/github-script@v9
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          script: |
-            const { data: commits } = await github.rest.repos.listCommits({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 50,
-            });
+          python-version: "3.12"
 
-            const categories = {
-              feat: [],
-              fix: [],
-              docs: [],
-              other: [],
-            };
-
-            for (const commit of commits.slice(0, 30)) {
-              const msg = commit.commit.message.split('\n')[0];
-              if (msg.startsWith('feat') || msg.includes('add') || msg.includes('new'))
-                categories.feat.push(`- ${msg}`);
-              else if (msg.startsWith('fix') || msg.includes('fix'))
-                categories.fix.push(`- ${msg}`);
-              else if (msg.startsWith('doc') || msg.includes('README'))
-                categories.docs.push(`- ${msg}`);
-              else
-                categories.other.push(`- ${msg}`);
-            }
-
-            let body = `## What's Changed\n\n`;
-            if (categories.feat.length) body += `### ✨ New Features\n${categories.feat.join('\n')}\n\n`;
-            if (categories.fix.length) body += `### 🐛 Bug Fixes\n${categories.fix.join('\n')}\n\n`;
-            if (categories.docs.length) body += `### 📝 Documentation\n${categories.docs.join('\n')}\n\n`;
-            if (categories.other.length) body += `### 🔧 Other\n${categories.other.join('\n')}\n\n`;
-
-            body += `---\n\`\`\`\npip install cognicore-env==${context.ref.replace('refs/tags/v', '')}\n\`\`\``;
-            core.setOutput('body', body);
-
-      - name: Create GitHub Release
-        uses: actions/github-script@v9
+      # PyPI never lets a version be replaced, so a mismatch must stop here.
+      - name: Check tag matches package version
         env:
-          # Passed as an env var, not pasted into the script: commit messages
-          # with backticks or ${...} would otherwise break or inject code.
-          CHANGELOG_BODY: ${{ steps.changelog.outputs.body }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'EOF'
+          import json, os, re, sys
+          tag = os.environ["TAG"].removeprefix("v")
+          pyproject = re.search(r'^version\s*=\s*"([^"]+)"', open("pyproject.toml", encoding="utf-8").read(), re.M).group(1)
+          package = re.search(r'^__version__\s*=\s*"([^"]+)"', open("cognicore/__init__.py", encoding="utf-8").read(), re.M).group(1)
+          registry = json.load(open("server.json", encoding="utf-8"))["version"]
+          found = {"tag": tag, "pyproject.toml": pyproject, "cognicore.__version__": package, "server.json": registry}
+          print(found)
+          if len(set(found.values())) != 1:
+              sys.exit(f"::error::Versions do not match: {found}")
+          EOF
+
+      - name: Build and check
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check --strict dist/*
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Trusted publishing: PyPI accepts a short-lived token that GitHub issues to
+    # this job only. No PyPI password or API token is stored in the repository.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/cognicore-env/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  github-release:
+    name: Create GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Create release from CHANGELOG
+        uses: actions/github-script@v9
         with:
           script: |
+            const fs = require('fs');
+            const tag = context.ref.replace('refs/tags/', '');
+            const version = tag.replace(/^v/, '');
+
+            // The release notes are this version's section of CHANGELOG.md.
+            const lines = fs.readFileSync('CHANGELOG.md', 'utf8').split(/\r?\n/);
+            const start = lines.findIndex(l => l.startsWith(`## [${version}]`));
+            let notes = '';
+            if (start !== -1) {
+              const end = lines.findIndex((l, i) => i > start && l.startsWith('## ['));
+              notes = lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim();
+            }
+            const install = `\n\n---\n\n\`\`\`bash\npip install cognicore-env==${version}\n\`\`\``;
+
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: context.ref.replace('refs/tags/', ''),
-              name: `CogniCore ${context.ref.replace('refs/tags/', '')}`,
-              body: process.env.CHANGELOG_BODY,
+              tag_name: tag,
+              name: `CogniCore ${tag}`,
+              body: notes ? notes + install : undefined,
+              // No CHANGELOG section: fall back to GitHub's list of merged PRs.
+              generate_release_notes: !notes,
               draft: false,
-              prerelease: false,
+              prerelease: /-|a|b|rc/.test(version),
             });
