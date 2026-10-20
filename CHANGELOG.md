@@ -1,12 +1,40 @@
 # Changelog
 
+All notable changes to CogniCore NEXUS are documented here.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Versioning follows [Semantic Versioning](https://semver.org/).
+
+---
+
 ## [Unreleased]
 
+## [0.11.0] — 2026-10-20
+
 ### Added
+- **Hosted MCP server** (`cognicore.connectors.remote`), running at `https://mcp.cognicoree.tech/mcp/stream` (Streamable HTTP) and `/mcp/sse`. Each signed-in user gets their own SQLite memory store.
+- **OAuth 2.1 sign-in through GitHub** (`cognicore.connectors.oauth`): dynamic client registration, PKCE (S256), rotating refresh tokens, and RFC 8414 / RFC 9728 metadata, so MCP clients connect without manual setup. Works with the Claude and ChatGPT connectors (including per-connector ChatGPT callback URLs). Other clients are allowed through `COGNICORE_EXTRA_REDIRECT_URIS`.
+- **Tool titles and behaviour annotations** on all 31 hosted MCP tools (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`), so clients know which calls change data.
+- `server.json` for the MCP registry, published as `io.github.cognicore-dev/cognicore-env`.
 - **mem0 Integration (`cognicore.integrations.mem0`)**: Verified memory transfer bridge to mem0 (`mem0ai/mem0`). Sealed bundle export/import with Ed25519 signing, deterministic canonical JSON, fail-closed signature verification, consequence-class split (authority vs information), structural quarantine (`quarantine.json` with dedicated TF-IDF index and query path), custody chain revocation checking, environment compatibility, promotion requiring fresh verification evidence, and index recall reachability assertions. Includes `sync_to_mem0()` for pushing verified memories into a live mem0 client. See `cognicore/integrations/mem0/` and `tests/test_mem0_bridge.py`.
+- **Experience transfer** (`cognicore.experience`): verification, revalidation, compatibility checks and conflict handling for reusing past experiences across projects.
+- **Probabilistic Cognitive Control** (`cognicore.decision`): safety gate and decision logging.
 
 ### Changed
-- Synced contributor docs and package metadata to `cognicore-dev/cognicore-my-openenv`, package version `0.9.5`, and Python 3.10+
+- **Repository restructured into subpackages** (`memory`, `agents`, `safety`, `evaluation`, `training`, `observability`, `connectors`, `experimental`, …). Every old import path still works and resolves to the same module; see `cognicore/_compat.py`. New code should use the new paths.
+- `SQLiteMemoryBackend` lexical search scores are now bounded to (0, 1], with the best match scoring 1.0, matching the range the hybrid backend already used. Ranking is unchanged. (#148)
+- Optional tool arguments accept an explicit `null`. (#152)
+- Memory extraction uses fewer tokens.
+
+### Fixed
+- **Security:** on the hosted server, one user could buy or receive another user's memories through the marketplace and sharing tools. `cognicore_purchase_memory` now requires the seller to have listed their memories, and `cognicore_share_experience` refuses to write into another account. (#161)
+- **Security:** removed hardcoded credentials and runtime artifacts from the repository.
+- Fabric tools on the hosted server called an undefined function and failed on every call.
+- `import_bundle` in the mem0 bridge now flushes the quarantine backend, so quarantined entries are not lost. (#151)
+- `cognicore.integrations.elevenlabs` imports again after the module moved to `cognicore.fabric.plugins.elevenlabs`. (#113)
+- Undefined names in type hints in `decision/logging.py`, `fabric/engine.py` and `realbench/coding_bench.py`.
+- A test keeps the version in `pyproject.toml`, `cognicore.__version__` and `server.json` in sync.
+- PyPI project links point at `cognicore-dev/cognicore-env`.
 
 ## [1.0.0] - 2026-07-06
 
@@ -23,13 +51,6 @@
 ### Changed
 - Refactored core modules to prepare for the "Living Agent Stack".
 
-
-All notable changes to CogniCore NEXUS are documented here.
-
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Versioning follows [Semantic Versioning](https://semver.org/).
-
----
 
 ## [0.9.3] — 2026-06-18
 

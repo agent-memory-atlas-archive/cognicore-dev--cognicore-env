@@ -92,7 +92,7 @@ The plugin exposes 5 MCP tools powered by `cognicore-env`:
 Ensure the published CogniCore package is installed with MCP and server extras:
 
 ```bash
-pip install "cognicore-env[server,mcp]==0.10.3"
+pip install "cognicore-env[server,mcp]==0.11.0"
 ```
 
 ### 2. Plugin Configuration
