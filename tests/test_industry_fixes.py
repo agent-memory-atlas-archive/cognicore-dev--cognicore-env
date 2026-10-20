@@ -1,6 +1,6 @@
 """Quick test: verify all 5 industry fixes work."""
 import cognicore as cc
-from cognicore.smart_agents import AutoLearner
+from cognicore.agents.smart import AutoLearner
 
 # 1. Imports + version
 print(f"v{cc.__version__} | Exports: {len(cc.__all__)}")

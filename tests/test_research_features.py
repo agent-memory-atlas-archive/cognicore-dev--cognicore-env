@@ -1,14 +1,14 @@
 """Tests for Phase 6 research-grade features."""
 
-from cognicore.predictive import FailurePredictor
-from cognicore.multi_memory import CognitiveMemory
-from cognicore.red_blue import RedVsBlue
-from cognicore.debugger import AIDebugger
-from cognicore.intelligence import IntelligenceScorer
-from cognicore.thought_trace import ThoughtTracer
-from cognicore.knowledge_transfer import transfer_knowledge, MentorStudent
-from cognicore.evolution import EvolutionEngine
-from cognicore.smart_agents import AutoLearner
+from cognicore.observability.predictive import FailurePredictor
+from cognicore.memory.multi_tier import CognitiveMemory
+from cognicore.safety.red_blue import RedVsBlue
+from cognicore.observability.debugger import AIDebugger
+from cognicore.evaluation.intelligence import IntelligenceScorer
+from cognicore.observability.thought_trace import ThoughtTracer
+from cognicore.agents.knowledge_transfer import transfer_knowledge, MentorStudent
+from cognicore.training.evolution import EvolutionEngine
+from cognicore.agents.smart import AutoLearner
 
 
 class TestFailurePredictor:
@@ -230,7 +230,7 @@ class TestEvolution:
         assert len(engine.history) == 2
 
     def test_agent_mutation(self):
-        from cognicore.evolution import EvolvableAgent
+        from cognicore.training.evolution import EvolvableAgent
 
         agent = EvolvableAgent()
         child = agent.mutate(rate=1.0)
@@ -238,7 +238,7 @@ class TestEvolution:
         assert child is not agent
 
     def test_crossover(self):
-        from cognicore.evolution import EvolvableAgent
+        from cognicore.training.evolution import EvolvableAgent
 
         a = EvolvableAgent()
         b = EvolvableAgent()

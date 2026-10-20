@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Set
 
 from cognicore.memory.base import MemoryEntry, MemoryState
-from cognicore.memory_manager import MemoryManager
+from cognicore.memory.manager import MemoryManager
 
 from cognicore.integrations.mem0.bundle import (
     ConsequenceClass,
@@ -411,6 +411,17 @@ def import_bundle(
                 trusted_entries.append(entry)
 
     imported_entries = trusted_entries + quarantined_entries
+
+    # ---- Flush quarantine region to disk ----
+    # Since #149, TFIDFMemoryBackend.store() persists lazily: it marks
+    # _dirty instead of writing synchronously. import_bundle owns this
+    # partition's lifecycle, so the quarantine backend must be flushed
+    # here -- before the reachability assertion can raise and before the
+    # process that ran the import exits. Without this flush, quarantined
+    # records live only in memory and a fresh QuarantinePartition opened
+    # on the same session dir finds an empty quarantine.json (silent data
+    # loss for every downstream consumer of the bridge).
+    partition.quarantine.save()
 
     # ---- All-authority bundle ----
     if authority_refused > 0 and not imported_entries:

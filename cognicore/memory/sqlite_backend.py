@@ -123,7 +123,7 @@ class SQLiteMemoryBackend(MemoryBackend):
         for col_name, col_def in migrations:
             if col_name not in existing_cols:
                 try:
-                    conn.execute(f"ALTER TABLE memory_entries ADD COLUMN {col_name} {col_def}")
+                    conn.execute(f"ALTER TABLE memory_entries ADD COLUMN {col_name} {col_def}")  # nosec B608 - names from the fixed migrations list
                 except Exception as e:
                     logger.warning(f"Migration error for {col_name}: {e}")
 

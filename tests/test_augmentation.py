@@ -1,6 +1,6 @@
-"""Tests for cognicore.augmentation — DataAugmenter."""
+"""Tests for cognicore.evaluation.augmentation — DataAugmenter."""
 
-from cognicore.augmentation import DataAugmenter
+from cognicore.evaluation.augmentation import DataAugmenter
 
 
 class TestDataAugmenterInit:

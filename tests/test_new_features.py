@@ -5,10 +5,10 @@ import json
 import shutil
 
 import cognicore
-from cognicore.memory_manager import MemoryManager
-from cognicore.leaderboard import Leaderboard
-from cognicore.finetuning import EpisodeRecorder, export_jsonl, export_reward_dataset
-from cognicore.multi_agent import DebateEnv
+from cognicore.memory.manager import MemoryManager
+from cognicore.evaluation.leaderboard import Leaderboard
+from cognicore.training.finetuning import EpisodeRecorder, export_jsonl, export_reward_dataset
+from cognicore.envs.multi_agent_base import DebateEnv
 
 
 worker_id = os.environ.get("PYTEST_XDIST_WORKER", "gw0")

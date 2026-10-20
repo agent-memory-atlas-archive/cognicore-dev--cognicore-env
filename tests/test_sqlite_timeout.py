@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 
-from cognicore.integrations.task_queue import NexusTask, NexusTaskQueue
+from cognicore.nexus.triggers.task_queue import NexusTask, NexusTaskQueue
 from cognicore.research.persistent_store import PersistentCognitionStore
 
 

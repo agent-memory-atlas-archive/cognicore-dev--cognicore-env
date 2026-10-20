@@ -59,3 +59,14 @@ task = Task(
 
 Crew(agents=[analyst], tasks=[task]).kickoff()
 ```
+
+## Demos
+
+| Folder | What it is |
+|---|---|
+| [`walkthrough/`](walkthrough/) | Numbered walkthrough: no memory, memory, persistence, semantic search, reflection, immune system, passports, LongMemEval |
+| [`experience_transfer/`](experience_transfer/) | Structured experience demos: verification, failure transfer, supersession, integrations |
+| [`standalone/`](standalone/) | Self-contained demos (Figma, GitHub, ElevenLabs pipelines, MCP launch) |
+| [`launch/`](launch/) | Scripts used to record launch videos and GIFs |
+
+Run from the repository root, e.g. `python examples/walkthrough/01_no_memory.py`.

@@ -3,12 +3,12 @@ import numpy as np
 
 # Verify zero import errors across all modules
 from cognicore.passport import AgentPassport
-from cognicore.dna import AgentDNA, Population
-from cognicore.conscience import Conscience
-from cognicore.civilization import Civilization, CivilizationServer, InsightReport
-from cognicore.timetravel import TimeTraveler
-from cognicore.oracle import Oracle
-from cognicore.dream import DreamEngine, DreamEvent
+from cognicore.experimental.dna import AgentDNA, Population
+from cognicore.experimental.conscience import Conscience
+from cognicore.experimental.civilization import Civilization, CivilizationServer, InsightReport
+from cognicore.experimental.timetravel import TimeTraveler
+from cognicore.experimental.oracle import Oracle
+from cognicore.experimental.dream import DreamEngine, DreamEvent
 
 # Existing modules (from 0.9.1 as mentioned)
 # If they don't exist in our mock environment, that's fine, we are testing

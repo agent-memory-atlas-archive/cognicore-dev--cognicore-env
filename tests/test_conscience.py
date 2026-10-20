@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from cognicore.conscience import Conscience, ConscienceTracker, ConscienceEvent
+from cognicore.experimental.conscience import Conscience, ConscienceTracker, ConscienceEvent
 
 class DummyEnv:
     def step(self, action):

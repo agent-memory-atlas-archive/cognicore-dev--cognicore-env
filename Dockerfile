@@ -11,7 +11,7 @@ COPY cognicore/ cognicore/
 
 # Install python dependencies
 RUN pip install --no-cache-dir uv && uv pip install --system -e . 
-RUN uv pip install --system uvicorn fastapi "mcp==1.2.0" pyjwt cryptography httpx
+RUN uv pip install --system uvicorn fastapi "mcp==1.30.0" pyjwt cryptography httpx
 
 # Environment configuration
 ENV PYTHONUNBUFFERED=1
@@ -24,4 +24,4 @@ RUN mkdir -p /data/cognicore
 EXPOSE 8000
 
 # MCP requires stdout for stdio transport, but we use SSE so standard uvicorn logging is fine
-CMD ["uvicorn", "cognicore.integrations.chatgpt:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "cognicore.connectors.chatgpt:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -12,4 +12,4 @@ CogniCore introduces a multi-agent lifecycle for memory:
 ### Failures are First-Class Citizens
 If an approach fails, the failure and reason are recorded. When another agent attempts a similar task, they receive the failure warning, effectively preventing them from making the same mistake.
 
-See `demos/experience_transfer/` for executable code demonstrations.
+See `examples/experience_transfer/` for executable code demonstrations.

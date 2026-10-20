@@ -13,13 +13,13 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Generate changelog
         id: changelog
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: commits } = await github.rest.repos.listCommits({
@@ -57,7 +57,11 @@ jobs:
             core.setOutput('body', body);
 
       - name: Create GitHub Release
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
+        env:
+          # Passed as an env var, not pasted into the script: commit messages
+          # with backticks or ${...} would otherwise break or inject code.
+          CHANGELOG_BODY: ${{ steps.changelog.outputs.body }}
         with:
           script: |
             await github.rest.repos.createRelease({
@@ -65,7 +69,7 @@ jobs:
               repo: context.repo.repo,
               tag_name: context.ref.replace('refs/tags/', ''),
               name: `CogniCore ${context.ref.replace('refs/tags/', '')}`,
-              body: `${{ steps.changelog.outputs.body }}`,
+              body: process.env.CHANGELOG_BODY,
               draft: false,
               prerelease: false,
             });

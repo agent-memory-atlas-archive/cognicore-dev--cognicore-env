@@ -108,17 +108,73 @@ graph TB
 
 ## Module Map
 
-| Directory | Purpose | Key Files |
+### The `cognicore` package (what ships on PyPI)
+
+| Directory | Purpose | Key files |
 |---|---|---|
-| `cognicore/core/` | Core runtime, config, base classes | `runtime.py`, `config.py`, `protocol.py` |
-| `cognicore/memory/` | Memory backend ABC and all implementations | `backend.py`, `tfidf.py`, `sqlite.py`, `embedding.py`, `graph.py` |
-| `cognicore/middleware/` | Reflection, rewards, safety, propose-revise | `reflection.py`, `rewards.py`, `safety.py` |
-| `cognicore/mcp/` | Model Context Protocol server | `server.py`, `tools.py` |
-| `cognicore/envs/` | Gymnasium-compatible environments | `base.py`, `safety.py`, `code_bugs.py` |
-| `cognicore/immune/` | Agent Immune System (anomaly detection) | `detector.py`, `response.py` |
-| `cognicore/replay/` | Replay Time Travel with RL | `buffer.py`, `persistence.py` |
-| `cognicore/agents/` | Built-in agent implementations | `base.py`, `random_agent.py`, `smart_agents.py` |
-| `cognicore/integrations/` | LangChain, CrewAI, and other framework adapters | `langchain.py`, `crewai.py` |
+| `cognicore/runtime.py` | `CogniCoreRuntime`, the universal cognition wrapper | |
+| `cognicore/cli.py` | The `cognicore` command | |
+| `cognicore/core/` | Base environment, types, spaces, errors, config profiles | `base_env.py`, `types.py`, `api.py`, `profiles.py` |
+| `cognicore/memory/` | Memory backend ABC, all backends, semantic and multi-tier memory | `base.py`, `sqlite_backend.py`, `tfidf_backend.py`, `semantic.py`, `manager.py`, `multi_tier.py` |
+| `cognicore/experience/` | Structured, verified experience memory | `manager.py`, `schema.py`, `verification.py` |
+| `cognicore/middleware/` | Reflection, rewards, propose-revise, safety monitor | `reflection.py`, `rewards.py`, `safety_monitor.py` |
+| `cognicore/agents/` | Built-in agents, agent builder, persistence, lifelong learning, swarms | `base_agent.py`, `smart.py`, `builder.py`, `persistence.py` |
+| `cognicore/envs/` | Environments, the registry, pipelines, multi-agent base | `registry.py`, `compose.py`, `multi_agent_base.py` |
+| `cognicore/safety/` | Safety layer, adversarial testing, red vs blue | `layer.py`, `adversarial.py`, `red_blue.py` |
+| `cognicore/evaluation/` | Benchmarking agents, leaderboards, analytics, reports, A/B experiments | `benchmark.py`, `leaderboard.py`, `analytics.py`, `report.py` |
+| `cognicore/training/` | Curricula, evolution, auto-improvement, reward tuning, fine-tuning export | `curriculum.py`, `evolution.py`, `finetuning.py` |
+| `cognicore/observability/` | Debugger, explainer, thought traces, failure prediction, cost, alerts | `debugger.py`, `explainer.py`, `cost_tracker.py` |
+| `cognicore/replay/` | Recording, replay and branching | `recorder.py`, `replayer.py`, `brancher.py` |
+| `cognicore/immune/` | Agent immune system (threat detection) | `shield.py`, `detector.py` |
+| `cognicore/connectors/` | Hosted MCP servers: the Claude connector and the ChatGPT app | `remote.py`, `oauth.py`, `chatgpt.py` |
+| `cognicore/extension/` | Local Claude Desktop extension (stdio MCP) and Claude Code setup | `server.py`, `code_setup.py` |
+| `cognicore/mcp/` | Local MCP server for the full runtime (`cognicore mcp serve`) | `server.py` |
+| `cognicore/server/` | REST API (`cognicore serve`) | `app.py` |
+| `cognicore/fabric/` | Cognitive Fabric adapters for third-party tools | `plugins/figma.py`, `plugins/elevenlabs.py` |
+| `cognicore/integrations/` | Framework bridges: LangChain, CrewAI, mem0, OpenAI Agents, Hugging Face | `langchain.py`, `crewai.py`, `mem0/` |
+| `cognicore/nexus/` | NEXUS autonomous coding agent | `agent.py`, `run.py` |
+| `cognicore/nexus/triggers/` | What starts NEXUS: task queue, GitHub issues, CI, Slack, Linear, schedules | `task_queue.py`, `webhook_server.py` |
+| `cognicore/benchmarks/` | Regression benchmark suite used by `make bench` and CI | `suite.py`, `regression.py` |
+| `cognicore/ui/` | Dashboard, memory studio, web UI server | `dashboard.py`, `studio.py`, `server.py` |
+| `cognicore/experimental/` | Dream, Oracle, TimeTravel, Civilization, Conscience, DNA (APIs may change) | |
+| `cognicore/utils/` | Caching, rate limiting, SQLite helpers | `cache.py`, `rate_limiter.py` |
+
+Other packages: `adapters/`, `commerce/`, `decision/`, `gym/`, `llm/`, `logging/`, `passport/`, `realbench/`, `reflection/`, `rendering/`, `research/`, `rl/`.
+
+**Old import paths still work.** Modules that moved in the restructure (for
+example `cognicore.advanced_memory`, now `cognicore.memory.semantic`) are aliased
+in [`cognicore/_compat.py`](cognicore/_compat.py), which lists every move. Use the new paths in new code.
+
+### The rest of the repository
+
+| Path | What it is |
+|---|---|
+| `tests/` | The test suite (`make test`) |
+| `benchmarks/` | Benchmark harnesses: LongMemEval (`longmemeval/`, `data/`, `common/`), agent-learning experiments (`agent_learning/`), and standalone scripts |
+| `examples/` | Runnable examples and demos (`walkthrough/`, `standalone/`, `experience_transfer/`, `launch/`) |
+| `plugins/` | Claude client packages: the Claude Code plugins and the Desktop extension (see `plugins/README.md`) |
+| `docs/` | Documentation; `docs/internal/` holds audits, plans and the progress log |
+| `scripts/` | Developer scripts: `checks/` (verification), `analysis/`, `probes/`, `dev/` |
+| `content_studio/` | Content Studio app |
+| `env/`, `server/`, `openenv.yaml`, `inference.py`, `dashboard.html` | The OpenEnv AI Safety Monitor environment. These stay at the root because the OpenEnv format expects them there. |
+| `api/`, `public/` | Vercel deployment (serverless function and static page) |
+| `Dockerfile`, `railway.toml`, `render.yaml`, `fly.toml`, `Procfile` | Deployment configs for the hosted connectors |
+
+Generated output (`results/`, `benchmark_output/`, `experiments/`, `cognicore_data/`) is git-ignored.
+
+### Moving files safely
+
+`scripts/checks/restructure_guard.py` snapshots how the code behaves (every
+test result, every module import, every first-party import statement, the
+public API, the CLI and each deployable app's `/health`) and compares two
+snapshots:
+
+```bash
+python scripts/checks/restructure_guard.py snapshot before.json
+# ... move files, add the old path to cognicore/_compat.py ...
+python scripts/checks/restructure_guard.py snapshot after.json
+python scripts/checks/restructure_guard.py compare before.json after.json
+```
 
 ---
 
@@ -132,8 +188,9 @@ Create a new file in `cognicore/memory/`:
 
 ```python
 # cognicore/memory/redis.py
-from cognicore.memory.backend import MemoryBackend
-from cognicore.memory.entry import MemoryEntry
+from typing import Dict, List, Optional
+
+from cognicore.memory.base import MemoryBackend, MemoryEntry, MemoryScope, SearchResult
 
 
 class RedisMemoryBackend(MemoryBackend):
@@ -150,31 +207,37 @@ Every `MemoryBackend` subclass must implement:
 
 | Method | Signature | Purpose |
 |---|---|---|
-| `store` | `store(entry: MemoryEntry) -> None` | Persist a memory entry |
-| `get_by_category` | `get_by_category(category: str, limit: int) -> list[MemoryEntry]` | Retrieve entries by category |
-| `search` | `search(query: str, top_k: int) -> list[MemoryEntry]` | Semantic/keyword search |
+| `store` | `store(entry: MemoryEntry) -> str` | Persist a memory entry and return its entry id |
+| `search` | `search(query: str, top_k: int = 5, category=None, scope=None, scope_id=None, question_timestamp=None, metadata_filters=None) -> List[SearchResult]` | Semantic + category search; returns ranked results |
+| `get_by_category` | `get_by_category(category: str, top_k: int = 5, success_filter=None) -> List[MemoryEntry]` | Category-exact retrieval with optional success filter |
+| `count` | `count() -> int` | Return total number of entries |
 | `clear` | `clear() -> None` | Remove all stored entries |
-| `size` | `size() -> int` | Return total number of entries |
 
 ```python
-def store(self, entry: MemoryEntry) -> None:
-    """Store a MemoryEntry in Redis."""
+def store(self, entry: MemoryEntry) -> str:
+    """Store a MemoryEntry in Redis and return its entry_id."""
     ...
 
-def get_by_category(self, category: str, limit: int = 10) -> list[MemoryEntry]:
+def search(self, query: str, top_k: int = 5,
+           category: Optional[str] = None,
+           scope: Optional[MemoryScope] = None,
+           scope_id: Optional[str] = None,
+           question_timestamp: Optional[float] = None,
+           metadata_filters: Optional[Dict[str, str]] = None) -> List[SearchResult]:
+    """Search for relevant memories."""
+    ...
+
+def get_by_category(self, category: str, top_k: int = 5,
+                    success_filter: Optional[bool] = None) -> List[MemoryEntry]:
     """Retrieve entries filtered by category."""
     ...
 
-def search(self, query: str, top_k: int = 5) -> list[MemoryEntry]:
-    """Search for relevant memories."""
+def count(self) -> int:
+    """Return the number of stored entries."""
     ...
 
 def clear(self) -> None:
     """Remove all entries from the store."""
-    ...
-
-def size(self) -> int:
-    """Return the number of stored entries."""
     ...
 ```
 
@@ -198,7 +261,7 @@ Create `tests/test_redis_memory_backend.py`:
 ```python
 import pytest
 from cognicore.memory.redis import RedisMemoryBackend
-from cognicore.memory.entry import MemoryEntry
+from cognicore.memory.base import MemoryEntry
 
 
 @pytest.fixture
@@ -210,24 +273,25 @@ def backend():
 
 
 def test_store_and_retrieve(backend):
-    entry = MemoryEntry(content="test data", category="test")
+    entry = MemoryEntry(text="test data", category="test")
     backend.store(entry)
-    results = backend.get_by_category("test", limit=5)
+    results = backend.get_by_category("test", top_k=5)
     assert len(results) == 1
-    assert results[0].content == "test data"
+    assert results[0].text == "test data"
 
 
 def test_search(backend):
-    entry = MemoryEntry(content="important finding", category="research")
+    entry = MemoryEntry(text="important finding", category="research")
     backend.store(entry)
     results = backend.search("important", top_k=3)
     assert len(results) >= 1
+    assert results[0].entry.text == "important finding"
 
 
 def test_clear(backend):
-    backend.store(MemoryEntry(content="temp", category="test"))
+    backend.store(MemoryEntry(text="temp", category="test"))
     backend.clear()
-    assert backend.size() == 0
+    assert backend.count() == 0
 ```
 
 > **Important:** Use `MemoryEntry` dataclass instances — never raw dicts. Use the concrete backend class name (e.g., `TFIDFMemoryBackend`), not the old `Memory` alias.
@@ -242,18 +306,29 @@ Environments follow the Gymnasium pattern and live in `cognicore/envs/`.
 
 ```python
 # cognicore/envs/my_task.py
-from cognicore.envs.base import CogniCoreEnv
+from typing import Any, Dict, List
+
+from cognicore.core.base_env import CogniCoreEnv
+from cognicore.core.types import EvalResult
 
 
 class MyTaskEnv(CogniCoreEnv):
     """Environment for [describe your task domain]."""
 
-    def _build_task(self, difficulty: str):
-        """Generate a task instance for the given difficulty."""
+    def _setup(self, **kwargs: Any) -> None:
+        """Configure observation/action spaces and load task data."""
         ...
 
-    def _evaluate_action(self, action: str) -> dict:
-        """Evaluate the agent's action and return reward components."""
+    def _generate_tasks(self) -> List[Any]:
+        """Return the tasks for the current episode."""
+        ...
+
+    def _evaluate(self, action: Dict[str, Any]) -> EvalResult:
+        """Grade the agent's action and return an EvalResult."""
+        ...
+
+    def _get_obs(self) -> Dict[str, Any]:
+        """Return the domain-specific observation fields."""
         ...
 ```
 
@@ -263,8 +338,10 @@ Add your environment to the registry so it's available via `cognicore.make()`:
 
 ```python
 # In cognicore/envs/__init__.py or the registry module
+from cognicore.envs.registry import register
+
 register(
-    id="MyTask-v1",
+    env_id="MyTask-v1",
     entry_point="cognicore.envs.my_task:MyTaskEnv",
 )
 ```
@@ -276,9 +353,9 @@ By convention, create Easy/Medium/Hard variants:
 ```python
 for difficulty in ["Easy", "Medium", "Hard"]:
     register(
-        id=f"MyTask{difficulty}-v1",
+        env_id=f"MyTask{difficulty}-v1",
         entry_point="cognicore.envs.my_task:MyTaskEnv",
-        kwargs={"difficulty": difficulty.lower()},
+        default_kwargs={"difficulty": difficulty.lower()},
     )
 ```
 
@@ -296,8 +373,8 @@ CogniCore provides adapters for popular agent frameworks. Follow the existing pa
 
 ```python
 # cognicore/integrations/my_framework.py
-from cognicore.core.runtime import CogniCoreRuntime
-from cognicore.memory.tfidf import TFIDFMemoryBackend
+from cognicore.runtime import CogniCoreRuntime
+from cognicore.memory.tfidf_backend import TFIDFMemoryBackend
 
 
 class MyFrameworkAdapter:
@@ -305,7 +382,7 @@ class MyFrameworkAdapter:
 
     def __init__(self, runtime: CogniCoreRuntime | None = None, **kwargs):
         self.runtime = runtime or CogniCoreRuntime(
-            memory_backend=TFIDFMemoryBackend(),
+            memory=TFIDFMemoryBackend(),
             **kwargs,
         )
 

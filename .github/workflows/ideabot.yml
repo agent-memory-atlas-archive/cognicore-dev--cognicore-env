@@ -5,7 +5,7 @@ name: 🧠 IdeaBot — Codebase Improvement Scanner
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Every hour
+    - cron: '0 0 * * 0'  # Weekly, Sunday 00:00 UTC
   workflow_dispatch:  # Manual trigger
 
 permissions:
@@ -17,9 +17,9 @@ jobs:
     name: 🔬 Deep Codebase Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -188,7 +188,7 @@ jobs:
           PYEOF
 
       - name: 📋 Create or Update Issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

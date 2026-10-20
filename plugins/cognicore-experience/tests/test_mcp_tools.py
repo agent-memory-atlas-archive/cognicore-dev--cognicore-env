@@ -7,7 +7,7 @@ import os
 import tempfile
 import pytest
 from cognicore.integrations.claude_code import ClaudeCodeIntegration
-from cognicore.extension.remote import (
+from cognicore.connectors.remote import (
     cognicore_record_experience,
     cognicore_verify_experience,
     cognicore_recall_experience,

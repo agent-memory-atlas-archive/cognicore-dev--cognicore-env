@@ -1,6 +1,6 @@
-"""Tests for cognicore.adversarial — AdversarialTester."""
+"""Tests for cognicore.safety.adversarial — AdversarialTester."""
 
-from cognicore.adversarial import AdversarialTester
+from cognicore.safety.adversarial import AdversarialTester
 
 
 class TestAdversarialTesterInit:

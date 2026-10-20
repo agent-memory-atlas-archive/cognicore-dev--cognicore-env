@@ -3,7 +3,9 @@ name: 👋 Welcome
 on:
   issues:
     types: [opened]
-  pull_request:
+  # pull_request_target (not pull_request) so PRs from forks get a token that
+  # can comment. Safe here: this job never checks out or runs the PR's code.
+  pull_request_target:
     types: [opened]
 
 permissions:
@@ -14,9 +16,10 @@ jobs:
   welcome:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
+            try {
             const { issue, pull_request } = context.payload;
             const item = issue || pull_request;
             const author = item.user.login;
@@ -36,7 +39,7 @@ jobs:
               const greeting = isIssue
                 ? `👋 Welcome to **CogniCore**, @${author}! Thanks for opening your first issue.\n\n` +
                   `A maintainer will review this shortly. In the meantime:\n` +
-                  `- 📖 Check our [README](https://github.com/Kaushalt2004/cognicore-my-openenv#readme)\n` +
+                  `- 📖 Check our [README](https://github.com/cognicore-dev/cognicore-env#readme)\n` +
                   `- 🧪 Run \`python -m cognicore.cli doctor\` to verify your setup\n` +
                   `- 💬 Feel free to add more details to help us understand the issue\n\n` +
                   `We aim to respond within 48 hours.`
@@ -53,4 +56,8 @@ jobs:
                 issue_number: item.number,
                 body: greeting,
               });
+            }
+            } catch (error) {
+              // A greeting is never worth a red check.
+              core.warning(`Welcome comment skipped: ${error.message}`);
             }

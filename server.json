@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cognicore-dev/cognicore-env",
+  "title": "CogniCore",
+  "description": "Memory, reflection and safety for AI agents. Hosted or local, no vector database.",
+  "version": "0.10.3",
+  "websiteUrl": "https://www.cognicoree.tech",
+  "repository": {
+    "url": "https://github.com/cognicore-dev/cognicore-env",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.cognicoree.tech/mcp/stream"
+    }
+  ]
+}

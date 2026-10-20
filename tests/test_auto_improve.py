@@ -1,6 +1,6 @@
-"""Tests for cognicore.auto_improve — auto_improve function."""
+"""Tests for cognicore.training.auto_improve — auto_improve function."""
 
-from cognicore.auto_improve import auto_improve
+from cognicore.training.auto_improve import auto_improve
 
 
 class TestAutoImproveBasic:
@@ -51,7 +51,7 @@ class TestAutoImproveBasic:
 
 class TestAutoImproveWithAgent:
     def test_with_custom_agent(self):
-        from cognicore.smart_agents import AutoLearner
+        from cognicore.agents.smart import AutoLearner
 
         agent = AutoLearner()
         result = auto_improve(
@@ -65,7 +65,7 @@ class TestAutoImproveWithAgent:
         assert "cycles" in result
 
     def test_with_safe_agent(self):
-        from cognicore.smart_agents import SafeAgent
+        from cognicore.agents.smart import SafeAgent
 
         agent = SafeAgent()
         result = auto_improve(

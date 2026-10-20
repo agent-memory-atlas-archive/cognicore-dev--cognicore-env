@@ -4,9 +4,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
 
-from cognicore_benchmarks.longmemeval.metrics import evaluate_metrics
+from benchmarks.longmemeval.metrics import evaluate_metrics
 
-with open('cognicore_benchmarks/data/longmemeval/longmemeval_oracle.json') as f:
+with open('benchmarks/data/longmemeval/longmemeval_oracle.json') as f:
     oracle = {item['question_id']: item for item in json.load(f)}
 
 with open('results/longmemeval/OFFICIAL_CognicoreFastAdapter_predictions_20260619T115949Z.jsonl') as f:

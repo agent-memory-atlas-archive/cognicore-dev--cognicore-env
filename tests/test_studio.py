@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from cognicore.studio import create_studio_app
+from cognicore.ui.studio import create_studio_app
 import json
 import os
 import tempfile

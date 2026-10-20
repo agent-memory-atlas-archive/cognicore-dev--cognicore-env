@@ -2,22 +2,22 @@
 
 import os
 
-from cognicore.persistence import save_agent, load_agent
-from cognicore.report import ReportGenerator
+from cognicore.agents.persistence import save_agent, load_agent
+from cognicore.evaluation.report import ReportGenerator
 from cognicore.replay import SessionRecorder
-from cognicore.profiles import get_profile, list_profiles
-from cognicore.prompt_optimizer import PromptOptimizer
-from cognicore.webhooks import AlertSystem
-from cognicore.augmentation import DataAugmenter
-from cognicore.fingerprint import AgentFingerprint
-from cognicore.difficulty import DifficultyEstimator
-from cognicore.rate_limiter import RateLimiter
-from cognicore.cache import ResponseCache
+from cognicore.core.profiles import get_profile, list_profiles
+from cognicore.training.prompt_optimizer import PromptOptimizer
+from cognicore.observability.webhooks import AlertSystem
+from cognicore.evaluation.augmentation import DataAugmenter
+from cognicore.agents.fingerprint import AgentFingerprint
+from cognicore.evaluation.difficulty import DifficultyEstimator
+from cognicore.utils.rate_limiter import RateLimiter
+from cognicore.utils.cache import ResponseCache
 
 
 class TestPersistence:
     def test_save_load(self, tmp_path):
-        from cognicore.smart_agents import AutoLearner
+        from cognicore.agents.smart import AutoLearner
 
         agent = AutoLearner()
         agent.knowledge["security"]["UNSAFE"] = 5.0
@@ -31,7 +31,7 @@ class TestPersistence:
         assert "security" in loaded.knowledge
 
     def test_save_evolve_agent(self, tmp_path):
-        from cognicore.evolution import EvolvableAgent
+        from cognicore.training.evolution import EvolvableAgent
 
         agent = EvolvableAgent()
         agent.fitness = 42.0

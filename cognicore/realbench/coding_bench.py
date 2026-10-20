@@ -14,7 +14,7 @@ The agent must produce fixed code that passes the test.
 from __future__ import annotations
 import subprocess
 import sys
-from cognicore.realbench.runner import BenchmarkRunner
+from cognicore.realbench.runner import BenchmarkResult, BenchmarkRunner
 
 # ─────────────────────────────────────────────────────────────
 # REAL BUGGY CODE TASKS — actual Python bugs + unit tests

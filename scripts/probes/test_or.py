@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
 
-from cognicore_benchmarks.common.llm_client import LLMClient
+from benchmarks.common.llm_client import LLMClient
 
 models = [
     "meta-llama/llama-3.3-70b-instruct:free",

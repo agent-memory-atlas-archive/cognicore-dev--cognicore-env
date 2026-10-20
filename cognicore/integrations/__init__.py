@@ -1,25 +1,28 @@
 """
-CogniCore Enterprise Integrations — NEXUS runs autonomously inside engineering teams.
+CogniCore framework integrations.
 
-Integrations:
-  - GitHub Issues: auto-fix labeled issues, open PRs
-  - CI Fixer: auto-repair failed GitHub Actions
-  - Slack: @nexus mention triggers, slash commands
-  - Linear: ticket assignment triggers
-  - Scheduler: cron-based recurring tasks
-  - PR Reviewer: memory-backed code review
-  - ElevenLabs: persistent voice preference memory layer
+  - LangChain:     cognicore.integrations.langchain
+  - CrewAI:        cognicore.integrations.crewai
+  - OpenAI Agents: cognicore.integrations.openai_agents
+  - mem0:          cognicore.integrations.mem0
+  - Hugging Face:  cognicore.integrations.huggingface
+  - Claude Code:   cognicore.integrations.claude_code
 
-Usage:
-  cognicore integrations setup    # Interactive setup
-  cognicore integrations test     # Test connections
-  cognicore integrations status   # Health check
-  cognicore webhooks start        # Start webhook server
+The NEXUS triggers (GitHub issues, CI, Slack, Linear, schedules, webhooks) moved
+to ``cognicore.nexus.triggers``, and the hosted MCP servers (ChatGPT, Claude) to
+``cognicore.connectors``. Their old paths here still work, and the names below
+are still exported from this package.
 """
-from cognicore.integrations.task_queue import NexusTask, NexusTaskQueue, TaskSource, TaskPriority
+from cognicore.nexus.triggers.task_queue import NexusTask, NexusTaskQueue, TaskSource, TaskPriority
 from cognicore.fabric.plugins.elevenlabs import ElevenLabsIntegration
 
 __all__ = [
     "NexusTask", "NexusTaskQueue", "TaskSource", "TaskPriority",
     "ElevenLabsIntegration",
 ]
+
+# Keep old submodule paths such as cognicore.integrations.task_queue available
+# as attributes; see cognicore/_compat.py.
+from cognicore._compat import alias_loaded as _alias_loaded
+
+_alias_loaded()

@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from cognicore.extension.remote import (
+from cognicore.connectors.remote import (
     cognicore_record_experience,
     cognicore_verify_experience,
     cognicore_recall_experience,

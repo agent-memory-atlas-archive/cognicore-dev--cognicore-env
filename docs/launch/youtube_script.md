@@ -75,7 +75,7 @@ pip install cognicore-env
 [SCREEN]: Type and execute:
 
 ```bash
-python demos/standalone/demo.py
+python examples/standalone/demo.py
 ```
 
 [SCREEN]: Terminal output appears:
@@ -122,7 +122,7 @@ CogniCore Demo v0.8.0
 
 ```python
 import cognicore as cc
-from cognicore.smart_agents import AutoLearner
+from cognicore.agents.smart import AutoLearner
 
 config = cc.CogniCoreConfig(enable_memory=True, enable_reflection=True)
 env = cc.make("SafetyClassification-v1", config=config)

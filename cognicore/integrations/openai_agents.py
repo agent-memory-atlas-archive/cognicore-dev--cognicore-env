@@ -72,7 +72,7 @@ except ImportError:
 # ── CogniCore imports ────────────────────────────────────────────────
 
 from cognicore.runtime import CogniCoreRuntime, RuntimeConfig
-from cognicore.advanced_memory import SemanticMemory
+from cognicore.memory.semantic import SemanticMemory
 from cognicore.middleware.reflection import ReflectionEngine
 from cognicore.middleware.memory import Memory
 from cognicore.immune.detector import ThreatDetector, ThreatScore

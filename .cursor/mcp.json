@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "cognicore-env": {
+      "url": "https://mcp.cognicoree.tech/mcp/stream"
+    }
+  }
+}

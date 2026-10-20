@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '0 0 * * 0'  # Every hour
+    - cron: '0 0 * * 0'  # Weekly, Sunday 00:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -16,9 +16,9 @@ jobs:
     name: Health Scan & Auto-Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -34,12 +34,15 @@ jobs:
         id: tests
         continue-on-error: true
         run: |
-          python -m pytest tests/ -v --tb=short -q 2>&1 | tee test_output.txt
-          echo "TEST_EXIT=$?" >> $GITHUB_ENV
-          if grep -q "FAILED" test_output.txt; then
-            echo "TEST_FAILED=true" >> $GITHUB_ENV
-            FAILURES=$(grep -c "FAILED" test_output.txt || echo "0")
-            echo "TEST_FAILURES=$FAILURES" >> $GITHUB_ENV
+          set +e
+          python -m pytest tests/ -n auto -q --tb=short > test_output.txt 2>&1
+          code=$?
+          cat test_output.txt
+          # pytest exits 0 (all passed) or 1 (some failed) when the suite actually ran.
+          if [ "$code" -le 1 ]; then echo "TESTS_RAN=true" >> "$GITHUB_ENV"; fi
+          if [ "$code" -ne 0 ]; then
+            echo "TEST_FAILED=true" >> "$GITHUB_ENV"
+            echo "TEST_FAILURES=$(grep -cE '^(FAILED|ERROR) ' test_output.txt)" >> "$GITHUB_ENV"
           fi
 
       # ─────────────────────────────────────────────
@@ -49,10 +52,15 @@ jobs:
         id: lint
         continue-on-error: true
         run: |
-          ruff check cognicore/ --output-format=text 2>&1 | tee lint_output.txt
-          LINT_COUNT=$(wc -l < lint_output.txt)
+          set +e
+          # Only errors that break code: syntax errors, undefined names, invalid comparisons.
+          # Style rules are left to `make lint`; they would open an issue on every run.
+          ruff check cognicore/ --select E9,F63,F7,F82 --output-format=concise > lint_output.txt 2>&1
+          if [ $? -le 1 ]; then echo "LINT_RAN=true" >> "$GITHUB_ENV"; fi
+          cat lint_output.txt
+          LINT_COUNT=$(grep -c ':[0-9]*:[0-9]*: ' lint_output.txt)
           echo "LINT_COUNT=$LINT_COUNT" >> $GITHUB_ENV
-          if [ "$LINT_COUNT" -gt 20 ]; then
+          if [ "$LINT_COUNT" -gt 0 ]; then
             echo "LINT_ISSUES=true" >> $GITHUB_ENV
           fi
 
@@ -63,7 +71,14 @@ jobs:
         id: security
         continue-on-error: true
         run: |
-          bandit -r cognicore/ -ll -q 2>&1 | tee security_output.txt
+          set +e
+          bandit -r cognicore/ -ll -q > security_output.txt 2>&1
+          code=$?
+          cat security_output.txt
+          # Bandit exits 0 when clean and 1 when it reports issues.
+          if [ "$code" -eq 0 ] || { [ "$code" -eq 1 ] && grep -q "Severity:" security_output.txt; }; then
+            echo "SECURITY_RAN=true" >> "$GITHUB_ENV"
+          fi
           if grep -qE "Severity: (Medium|High)" security_output.txt; then
             echo "SECURITY_ISSUES=true" >> $GITHUB_ENV
             HIGH=$(grep -c "Severity: High" security_output.txt || echo "0")
@@ -79,7 +94,7 @@ jobs:
         id: unused
         continue-on-error: true
         run: |
-          ruff check cognicore/ --select F401 --output-format=text 2>&1 | tee unused_output.txt
+          ruff check cognicore/ --select F401 --output-format=concise 2>&1 | tee unused_output.txt
           UNUSED_COUNT=$(wc -l < unused_output.txt)
           echo "UNUSED_COUNT=$UNUSED_COUNT" >> $GITHUB_ENV
           if [ "$UNUSED_COUNT" -gt 5 ]; then
@@ -94,7 +109,7 @@ jobs:
         continue-on-error: true
         run: |
           # Check undefined variables, syntax issues, f-string problems
-          ruff check cognicore/ --select E,F,W --output-format=text 2>&1 | tee bugs_output.txt
+          ruff check cognicore/ --select E,F,W --output-format=concise 2>&1 | tee bugs_output.txt
           # Check all imports work
           python -c "
           import traceback
@@ -120,6 +135,9 @@ jobs:
           if grep -q "IMPORT ERRORS" import_output.txt; then
             echo "IMPORT_BROKEN=true" >> $GITHUB_ENV
           fi
+          if grep -qE "IMPORT ERRORS|import clean" import_output.txt; then
+            echo "IMPORTS_RAN=true" >> "$GITHUB_ENV"
+          fi
 
       # ─────────────────────────────────────────────
       # 6. DOCTOR + TODO CHECK
@@ -128,10 +146,12 @@ jobs:
         id: doctor
         continue-on-error: true
         run: |
-          python -m cognicore.cli doctor 2>&1 | tee doctor_output.txt
+          set +e
+          python -m cognicore.cli doctor > doctor_output.txt 2>&1
           if [ $? -ne 0 ]; then
             echo "DOCTOR_FAILED=true" >> $GITHUB_ENV
           fi
+          cat doctor_output.txt
 
       - name: Count TODOs
         run: |
@@ -147,7 +167,7 @@ jobs:
 
       - name: 🚨 Issue — Test failures
         if: env.TEST_FAILED == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -181,7 +201,7 @@ jobs:
 
       - name: 🔐 Issue — Security vulnerabilities
         if: env.SECURITY_ISSUES == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -206,7 +226,7 @@ jobs:
 
       - name: ⚠️ Issue — Code quality
         if: env.LINT_ISSUES == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -231,7 +251,7 @@ jobs:
 
       - name: 💀 Issue — Broken imports
         if: env.IMPORT_BROKEN == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -256,7 +276,7 @@ jobs:
 
       - name: 🧹 Issue — Too many TODOs
         if: env.CODE_WARNINGS == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: issues } = await github.rest.issues.listForRepo({
@@ -278,7 +298,7 @@ jobs:
 
       - name: ⚕️ Issue — Doctor failed
         if: env.DOCTOR_FAILED == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -300,3 +320,42 @@ jobs:
               body: `## 🤖 Auto-Detected\n\n\`\`\`\n${output}\n\`\`\`\n\n---\n*Auto-created by CogniCore Bot*`,
               labels: ['🤖 auto-detected','⚕️ health'],
             });
+
+      # ═══════════════════════════════════════════════
+      # AUTO-CLOSE ISSUES THAT ARE FIXED
+      # ═══════════════════════════════════════════════
+
+      - name: ✅ Close resolved issues
+        if: github.ref == 'refs/heads/main'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const env = process.env;
+            // A check can only resolve its issue if it actually ran this time.
+            const checks = [
+              { title: 'Test Failures', ran: env.TESTS_RAN === 'true', failing: env.TEST_FAILED === 'true' },
+              { title: 'Security Issues Found', ran: env.SECURITY_RAN === 'true', failing: env.SECURITY_ISSUES === 'true' },
+              { title: 'Code Quality', ran: env.LINT_RAN === 'true', failing: env.LINT_ISSUES === 'true' },
+              { title: 'Broken Imports', ran: env.IMPORTS_RAN === 'true', failing: env.IMPORT_BROKEN === 'true' },
+              { title: 'TODO/FIXME', ran: !!env.TODO_COUNT, failing: env.CODE_WARNINGS === 'true' },
+              { title: 'Doctor Check Failed', ran: true, failing: env.DOCTOR_FAILED === 'true' },
+            ];
+            const { owner, repo } = context.repo;
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: '🤖 auto-detected', per_page: 100,
+            });
+            for (const issue of open) {
+              if (issue.pull_request || issue.user.login !== 'github-actions[bot]') continue;
+              const check = checks.find(c => issue.title.includes(c.title));
+              if (!check || !check.ran || check.failing) continue;
+              try {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: issue.number,
+                  body: `✅ This check passes on \`main\` as of \`${context.sha.substring(0, 7)}\`. Closing automatically; a new issue will be opened if it fails again.`,
+                });
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: 'closed', state_reason: 'completed' });
+                core.info(`Closed #${issue.number}: ${issue.title}`);
+              } catch (e) {
+                core.warning(`Could not close #${issue.number}: ${e.message}`);
+              }
+            }
