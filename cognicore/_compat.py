@@ -79,6 +79,7 @@ MOVED_MODULES = {
     "cognicore.extension.oauth": "cognicore.connectors.oauth",
     "cognicore.integrations.chatgpt": "cognicore.connectors.chatgpt",
     "cognicore.integrations.auth": "cognicore.connectors.supabase_auth",
+    "cognicore.integrations.elevenlabs": "cognicore.fabric.plugins.elevenlabs",
     # NEXUS triggers
     "cognicore.integrations.task_queue": "cognicore.nexus.triggers.task_queue",
     "cognicore.integrations.slack": "cognicore.nexus.triggers.slack",

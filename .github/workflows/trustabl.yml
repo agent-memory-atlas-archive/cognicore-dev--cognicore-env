@@ -34,3 +34,29 @@ jobs:
         continue-on-error: true
         with:
           version: v0.1.6
+          upload-sarif: "false"
+      # Some findings are about the whole repository and carry no file location.
+      # Code scanning rejects those ("expected at least one location") and marks
+      # the check as errored, so they are dropped from the upload only; they are
+      # still in the PR comment and the trustabl-scan-results artifact.
+      - name: Drop findings without a file location
+        if: hashFiles('trustabl.sarif') != ''
+        run: |
+          python3 - <<'EOF'
+          import json
+          with open("trustabl.sarif", encoding="utf-8") as f:
+              sarif = json.load(f)
+          for run in sarif.get("runs", []):
+              results = run.get("results", [])
+              run["results"] = [r for r in results if r.get("locations")]
+              print(f"uploading {len(run['results'])} of {len(results)} findings")
+          with open("trustabl.sarif", "w", encoding="utf-8") as f:
+              json.dump(sarif, f)
+          EOF
+      # Fork PRs get a read-only token and cannot upload; that must not fail the job.
+      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        if: hashFiles('trustabl.sarif') != ''
+        continue-on-error: true
+        with:
+          sarif_file: trustabl.sarif
+          category: trustabl
