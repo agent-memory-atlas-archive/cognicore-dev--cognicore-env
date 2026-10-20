@@ -16,6 +16,8 @@ def main():
         backstory="An expert analyst who uses persistent memory to recall past failures and successes.",
         verbose=True,
         allow_delegation=False,
+        max_iter=10,  # one recall and one remember; stop a looping agent well before the default 25
+        max_execution_time=120,  # seconds; max_iter does not cap a stalled tool or model call
         tools=memory_tools,
         llm="openrouter/openai/gpt-4o-mini"
     )

@@ -17,6 +17,8 @@ def main():
         backstory="An advanced security agent that leverages persistent cognitive memory to learn from every task.",
         verbose=True,
         allow_delegation=False,
+        max_iter=15,  # the task needs five tool calls; leave room, but stop a loop
+        max_execution_time=180,  # seconds; max_iter does not cap a stalled tool or model call
         tools=tools,
         llm="openrouter/openai/gpt-4o-mini"
     )
