@@ -13,7 +13,7 @@ def test_remote_missing_auth():
     # Should get 401 without auth header
     response = client.get("/mcp/sse")
     assert response.status_code == 401
-    assert "Missing or invalid authentication credentials" in response.text
+    assert response.text == "Authentication required."
 
 @pytest.mark.parametrize(
     ("method", "path"),
@@ -25,7 +25,7 @@ def test_remote_missing_auth():
 def test_root_mcp_paths_cannot_bypass_auth(method, path):
     response = client.request(method, path)
     assert response.status_code == 401
-    assert "Missing or invalid authentication credentials" in response.text
+    assert response.text == "Authentication required."
 
 def test_root_mcp_mount_is_not_exposed_with_valid_auth():
     token = create_token("user_123")
@@ -56,13 +56,13 @@ def test_mock_oauth_endpoints_are_disabled_by_default(monkeypatch, method, path)
 def test_remote_invalid_jwt():
     response = client.get("/mcp/sse", headers={"Authorization": "Bearer invalid.token.here"})
     assert response.status_code == 401
-    assert "Invalid JWT" in response.text
+    assert response.text == "Invalid or expired token."
     
 def test_remote_missing_sub():
     token = jwt.encode({"other": "value"}, JWT_SECRET, algorithm=JWT_ALGORITHM)
     response = client.get("/mcp/sse", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
-    assert "JWT missing 'sub' claim" in response.text
+    assert response.text == "Invalid or expired token."
 
 def test_remote_with_valid_jwt():
     token = create_token("user_123")

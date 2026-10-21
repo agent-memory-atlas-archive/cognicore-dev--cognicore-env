@@ -7,7 +7,15 @@ deliberate fault-injection subprocess that proves the suite goes red
 when the reachability guarantee is defeated at the recall seam.
 """
 
+import os
+
 import pytest
+
+# The hosted server rate-limits requests. Tests send hundreds from one fake
+# client, so the limit is off by default; tests/test_remote_hardening.py
+# exercises the limiter directly.
+os.environ.setdefault("COGNICORE_RATE_LIMIT_USER", "0")
+os.environ.setdefault("COGNICORE_RATE_LIMIT_IP", "0")
 
 
 def pytest_addoption(parser):

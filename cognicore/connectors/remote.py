@@ -58,6 +58,7 @@ security = HTTPBearer()
 # Claude connector directory requires them. Keep them accurate: a tool that
 # writes must not be marked read-only.
 import inspect as _inspect
+import math
 
 try:
     from mcp.types import ToolAnnotations as _ToolAnnotations
@@ -134,9 +135,7 @@ def get_user_id(request_obj) -> str:
         anthropic_client = request_obj.headers.get("x-anthropic-client", "")
         if auth and auth.lower().startswith("bearer "):
             token = auth[7:].strip()
-        elif request_obj.query_params:
-            token = request_obj.query_params.get("token")
-            
+
     # If it's an MCP RequestContext
     else:
         debug_logs.append("No headers attribute (MCP context)")
@@ -178,7 +177,7 @@ def get_user_id(request_obj) -> str:
         print(f"[DEBUG] get_user_id failed to find token. Logs: {' | '.join(debug_logs)}")
         raise HTTPException(
             status_code=401,
-            detail=f"Missing or invalid authentication credentials in get_user_id. Debug: {' | '.join(debug_logs)}",
+            detail="Authentication required.",
         )
         
     try:
@@ -1366,18 +1365,14 @@ class AuthMiddleware:
                 
             headers = dict(scope.get("headers", []))
             auth = headers.get(b"authorization", b"").decode("utf-8")
-            query = scope.get("query_string", b"").decode("utf-8")
-            
+
+            # Tokens are accepted only in the Authorization header. A token in
+            # the URL (?token=) would be written to proxy and access logs.
             token = None
             anthropic_client = headers.get(b"x-anthropic-client", b"").decode("utf-8")
             if auth and auth.lower().startswith("bearer "):
                 token = auth[7:].strip()
-            elif "token=" in query:
-                from urllib.parse import parse_qs
-                parsed = parse_qs(query)
-                if "token" in parsed:
-                    token = parsed["token"][0]
-            
+
             if not token and anthropic_client and INSECURE_AUTH_ENABLED:
                 print(f"[AUTH] Middleware: accepting x-anthropic-client: {anthropic_client[:40]}")
                 return await self.app(scope, receive, send)
@@ -1392,28 +1387,116 @@ class AuthMiddleware:
                 ]})
                 await send({"type": "http.response.body", "body": body})
 
+            # Error bodies say only what the client needs to do next. Details
+            # such as received headers or why a token failed help attackers.
             if not token:
-                header_keys = ", ".join([k.decode("utf-8") for k in headers.keys()])
-                error_msg = f"Missing or invalid authentication credentials. Received headers: {header_keys}"
-                await unauthorized(error_msg.encode("utf-8"))
+                await unauthorized(b"Authentication required.")
                 return
 
             try:
                 payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-                if not _oauth.is_access_token_payload(payload):
-                    await unauthorized(b"Invalid JWT: not an access token")
-                    return
-                if not payload.get("sub"):
-                    await unauthorized(b"JWT missing 'sub' claim")
-                    return
-            except jwt.InvalidTokenError as e:
-                await unauthorized(f"Invalid JWT: {str(e)}".encode("utf-8"))
+            except jwt.InvalidTokenError:
+                await unauthorized(b"Invalid or expired token.")
                 return
-                
+            if not _oauth.is_access_token_payload(payload) or not payload.get("sub"):
+                await unauthorized(b"Invalid or expired token.")
+                return
+
         return await self.app(scope, receive, send)
+
+class RateLimitMiddleware:
+    """Limit how fast one client can call the server.
+
+    Signed-in requests are counted per user. Claude and ChatGPT call from shared
+    IP ranges, so per-IP limits would make their users throttle each other, and
+    the user ID comes from a signed token, so it cannot be faked. Requests
+    without a valid token (sign-in steps, scans, floods) are counted per IP.
+    """
+
+    EXEMPT_PATHS = ("/health",)
+
+    def __init__(self, app, user_per_minute: int, ip_per_minute: int):
+        self.app = app
+        self.limits = {"user": user_per_minute, "ip": ip_per_minute}
+        self._buckets: Dict[str, tuple] = {}  # key -> (requests left, last update)
+
+    @staticmethod
+    def client_ip(scope) -> str:
+        # Railway's edge appends the address it saw to X-Forwarded-For, so the
+        # last entry is the real client; earlier entries can be set by anyone.
+        forwarded = b",".join(v for k, v in scope.get("headers", []) if k == b"x-forwarded-for")
+        hosts = [h.strip() for h in forwarded.decode("latin-1").split(",") if h.strip()]
+        if hosts:
+            return hosts[-1]
+        client = scope.get("client")
+        return client[0] if client else "unknown"
+
+    @staticmethod
+    def user_id(scope) -> Optional[str]:
+        for key, value in scope.get("headers", []):
+            if key != b"authorization":
+                continue
+            auth = value.decode("latin-1")
+            if not auth.lower().startswith("bearer "):
+                return None
+            try:
+                payload = jwt.decode(auth[7:].strip(), JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            except jwt.InvalidTokenError:
+                return None
+            if _oauth.is_access_token_payload(payload) and payload.get("sub"):
+                return payload["sub"]
+            return None
+        return None
+
+    def wait_time(self, key: str, per_minute: int) -> float:
+        """Spend one request from key's budget. 0 if allowed, else seconds until one is free."""
+        now = _time.monotonic()
+        rate = per_minute / 60.0
+        tokens, last = self._buckets.get(key, (float(per_minute), now))
+        tokens = min(float(per_minute), tokens + (now - last) * rate)
+        if tokens >= 1:
+            self._buckets[key] = (tokens - 1, now)
+            return 0.0
+        self._buckets[key] = (tokens, now)
+        return (1 - tokens) / rate
+
+    def _forget_idle(self) -> None:
+        # A budget refills completely within a minute, so forgetting a key idle
+        # that long changes nothing. Keeps memory bounded under a flood.
+        if len(self._buckets) > 10_000:
+            now = _time.monotonic()
+            self._buckets = {k: v for k, v in self._buckets.items() if now - v[1] < 60}
+
+    async def __call__(self, scope, receive, send):
+        if (scope["type"] != "http" or scope.get("method") == "OPTIONS"
+                or scope.get("path") in self.EXEMPT_PATHS):
+            return await self.app(scope, receive, send)
+
+        user = self.user_id(scope)
+        kind, who = ("user", user) if user else ("ip", self.client_ip(scope))
+        limit = self.limits[kind]
+        if limit > 0:
+            self._forget_idle()
+            wait = self.wait_time(f"{kind}:{who}", limit)
+            if wait:
+                await send({"type": "http.response.start", "status": 429, "headers": [
+                    (b"content-type", b"text/plain"),
+                    (b"retry-after", str(max(1, math.ceil(wait))).encode()),
+                ]})
+                await send({"type": "http.response.body", "body": b"Too many requests. Try again shortly."})
+                return
+        return await self.app(scope, receive, send)
+
 
 app.add_middleware(AuthMiddleware)
 app.add_middleware(StreamingHeadersMiddleware)
+# Requests per minute; 0 turns a limit off. Added after the others so it runs
+# before authentication and also limits floods of unauthenticated requests.
+app.add_middleware(
+    RateLimitMiddleware,
+    user_per_minute=int(os.environ.get("COGNICORE_RATE_LIMIT_USER", "120")),
+    ip_per_minute=int(os.environ.get("COGNICORE_RATE_LIMIT_IP", "120")),
+)
 
 app.add_middleware(
     CORSMiddleware,
