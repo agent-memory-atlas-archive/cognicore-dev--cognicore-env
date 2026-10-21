@@ -1,6 +1,6 @@
 # CogniCore Privacy Policy
 
-**Effective date:** 20 October 2026
+**Effective date:** 21 October 2026
 
 This policy explains what data the hosted CogniCore service collects, how it is used, and the choices you have. It covers the hosted MCP server at `https://mcp.cognicoree.tech`, which is what you use when you connect CogniCore to Claude, ChatGPT or another AI app.
 
@@ -86,6 +86,6 @@ If we change this policy, we will update the effective date above. If a change s
 
 ## Contact
 
-Email: **CONTACT_EMAIL**
+Email: [contact@cognicoree.tech](mailto:contact@cognicoree.tech)
 
 For questions that are not private, you can also open an issue at <https://github.com/cognicore-dev/cognicore-env/issues>. Please do not post personal data in public issues.
