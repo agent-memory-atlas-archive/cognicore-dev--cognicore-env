@@ -71,27 +71,25 @@ def test_limited_response_says_when_to_retry():
     assert int(response.headers["retry-after"]) >= 1
 
 
-def test_forged_forwarded_for_does_not_reset_the_limit():
-    # Railway appends the real address last; earlier entries are attacker-controlled.
+def test_forwarded_for_is_ignored():
+    # Clients can write X-Forwarded-For, and on Railway its entries vary per request.
     client = _limited_client(ip_per_minute=2)
-    codes = [
-        client.get("/mcp/stream", headers={"X-Forwarded-For": f"10.0.0.{i}, 203.0.113.7"}).status_code
-        for i in range(3)
-    ]
+    codes = [client.get("/mcp/stream", headers={"X-Forwarded-For": f"10.0.0.{i}"}).status_code for i in range(3)]
     assert codes == [200, 200, 429]
 
 
-def test_different_real_ips_have_separate_limits():
+def test_limit_is_per_real_ip():
     client = _limited_client(ip_per_minute=1)
-    assert client.get("/mcp/stream", headers={"X-Forwarded-For": "203.0.113.7"}).status_code == 200
-    assert client.get("/mcp/stream", headers={"X-Forwarded-For": "203.0.113.8"}).status_code == 200
+    assert client.get("/mcp/stream", headers={"X-Real-IP": "203.0.113.7"}).status_code == 200
+    assert client.get("/mcp/stream", headers={"X-Real-IP": "203.0.113.7"}).status_code == 429
+    assert client.get("/mcp/stream", headers={"X-Real-IP": "203.0.113.8"}).status_code == 200
 
 
 def test_signed_in_users_are_limited_per_user_not_per_ip():
     # Claude and ChatGPT call from shared IPs; one heavy user must not block another.
     client = _limited_client(user_per_minute=2, ip_per_minute=1)
-    alice = {"Authorization": f"Bearer {_access_token('github:1')}", "X-Forwarded-For": "198.51.100.1"}
-    bob = {"Authorization": f"Bearer {_access_token('github:2')}", "X-Forwarded-For": "198.51.100.1"}
+    alice = {"Authorization": f"Bearer {_access_token('github:1')}", "X-Real-IP": "198.51.100.1"}
+    bob = {"Authorization": f"Bearer {_access_token('github:2')}", "X-Real-IP": "198.51.100.1"}
     assert _codes(client, 3, headers=alice) == [200, 200, 429]
     assert _codes(client, 2, headers=bob) == [200, 200]
 

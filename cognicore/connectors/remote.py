@@ -1422,12 +1422,13 @@ class RateLimitMiddleware:
 
     @staticmethod
     def client_ip(scope) -> str:
-        # Railway's edge appends the address it saw to X-Forwarded-For, so the
-        # last entry is the real client; earlier entries can be set by anyone.
-        forwarded = b",".join(v for k, v in scope.get("headers", []) if k == b"x-forwarded-for")
-        hosts = [h.strip() for h in forwarded.decode("latin-1").split(",") if h.strip()]
-        if hosts:
-            return hosts[-1]
+        # X-Real-IP is set by Railway's edge to the address that connected to it.
+        # X-Forwarded-For cannot be used: clients can prepend entries, and
+        # Railway's internal proxies append their own addresses, which differ
+        # from request to request, so no position in it identifies the client.
+        for key, value in scope.get("headers", []):
+            if key == b"x-real-ip" and value.strip():
+                return value.decode("latin-1").strip()
         client = scope.get("client")
         return client[0] if client else "unknown"
 
